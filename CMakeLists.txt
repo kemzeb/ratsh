@@ -20,7 +20,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/CMake)
 
 include(GoogleTest)
 
-add_executable(ratshell main.cpp)
+add_executable(ratshell main.cpp Shell.cpp Shell.h)
 
 target_link_libraries(ratshell gtest_main)
 
