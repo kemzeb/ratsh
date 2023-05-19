@@ -12,7 +12,7 @@
 int main()
 {
     auto shell = std::make_unique<ratshell::Shell>();
-    std::string input { "" };
+    std::string input;
 
     std::cout << "> ";
     while (true) {
@@ -21,7 +21,7 @@ int main()
         if (input == "exit")
             return 0;
 
-        int code = shell->run_command(input);
+        auto code = shell->run_command(input);
 
         if (code != 0)
             std::cerr << "An error has occurred. Code " << code << "\n";
