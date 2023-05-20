@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project("ratshell" CXX)
+project("ratsh" CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -20,7 +20,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/CMake)
 
 include(GoogleTest)
 
-add_executable(ratshell main.cpp Shell.cpp Shell.h)
+add_executable(ratsh main.cpp Shell.cpp Shell.h)
 
-target_link_libraries(ratshell gtest_main)
+target_link_libraries(ratsh gtest_main)
 
