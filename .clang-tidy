@@ -1,0 +1,20 @@
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  concurrency-*,
+  misc-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -bugprone-easily-swappable-parameters,
+  -cert-dcl21-cpp, # Deprecated check, will be removed in clang-tidy 19.
+  -misc-no-recursion,
+  -readability-braces-around-statements,
+  -readability-convert-member-functions-to-static,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -readability-named-parameter,
+HeaderFilterRegex: ''
+FormatStyle: WebKit 
