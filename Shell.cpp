@@ -5,59 +5,41 @@
  */
 
 #include "Shell.h"
+#include "Parser.h"
+#include <memory>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#include <unistd.h>
 #include <vector>
 
-namespace {
+namespace RatShell {
 
-std::vector<std::string> split(std::string_view command)
+int Shell::run_command(std::string_view input)
 {
-    if (command.empty())
-        return {};
+    auto node = parse(input);
 
-    std::vector<std::string> result {};
-    std::string builder {};
-    bool found_whitespace = false;
+    if (!node)
+        return 1;
 
-    // Ignore whitespace characters at the beginning if any.
-    size_t i = 0;
-    while (i < command.size() && (isspace(command[i]) != 0))
-        i++;
-
-    for (size_t j = i; j < command.size(); j++) {
-        auto character = command[j];
-        if (isspace(character) != 0) {
-            found_whitespace = true;
-            continue;
-        }
-
-        if (found_whitespace) {
-            found_whitespace = false;
-            result.push_back(std::move(builder));
-            builder = "";
-        }
-        builder += character;
+    if (node->kind() == AST::Node::Kind::Execute) {
+        auto exec_node = static_cast<AST::Execute&>(*node);
+        return execute_process(exec_node.argv());
     }
 
-    if (!builder.empty())
-        result.push_back(std::move(builder));
-
-    return result;
+    return 1;
 }
 
-}
-
-namespace ratshell {
-
-int Shell::run_command(std::string const& command)
+std::shared_ptr<AST::Node> Shell::parse(std::string_view input) const
 {
-    auto args = split(command);
-    if (args.empty())
+    Parser parser { input };
+    return parser.parse();
+}
+
+int Shell::execute_process(std::vector<std::string> const& argv)
+{
+    if (argv.empty())
         return 0;
 
-    auto const* executable_path = args[0].c_str();
+    auto const* executable_path = argv[0].c_str();
 
     struct stat sb;
     auto file_exists = stat(executable_path, &sb) == 0 && S_ISREG(sb.st_mode);
@@ -70,20 +52,21 @@ int Shell::run_command(std::string const& command)
 
     auto pid = fork();
     if (pid < 0) {
-        // NOTE: The POSIX spec does not mention what exit code to return when fork() fails.
+        /// NOTE: The POSIX spec does not mention what exit code to return when fork() fails.
         return 1;
     }
 
     if (pid == 0) {
         std::vector<char*> c_strings {};
 
-        c_strings.reserve(args.size());
-        for (auto const& str : args) {
+        c_strings.reserve(argv.size());
+
+        for (auto const& str : argv) {
             c_strings.push_back(const_cast<char*>(str.c_str()));
         }
         c_strings.push_back(NULL);
 
-        // FIXME: It is possible for execv to fail. We need to account for this.
+        /// FIXME: It is possible for execv to fail. We need to account for this.
         execv(executable_path, c_strings.data());
     }
 

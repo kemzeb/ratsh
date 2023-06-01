@@ -44,7 +44,10 @@ struct Token {
         CloseParen,
         Great,
         Less,
-        Newline
+        Newline,
+
+        // The following are utilized during parsing.
+        Word
     };
 
     Type type;

@@ -22,10 +22,13 @@ include(GoogleTest)
 
 add_executable(ratsh
     main.cpp
+    AST.h
     Shell.cpp
     Shell.h
     Lexer.cpp
     Lexer.h
+    Parser.h
+    Parser.cpp
 )
 
 target_link_libraries(ratsh gtest_main)

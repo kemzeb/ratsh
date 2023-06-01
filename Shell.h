@@ -6,14 +6,21 @@
 
 #pragma once
 
+#include "AST.h"
+#include <memory>
 #include <string>
 
-namespace ratshell {
+namespace RatShell {
 
 class Shell {
 
 public:
-    int run_command(std::string const& command);
+    int run_command(std::string_view input);
+
+private:
+    std::shared_ptr<AST::Node> parse(std::string_view) const;
+
+    int execute_process(std::vector<std::string> const& argv);
 };
 
 }
