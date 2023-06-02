@@ -16,7 +16,8 @@ enum class StateType {
     None,
     Start,
     End,
-    Operator
+    Operator,
+    SingleQuotedString,
 };
 
 struct State {
@@ -149,6 +150,7 @@ public:
 
     char consume();
     char peek() const;
+    bool peek_is(char expected) const { return peek() == expected; };
 
 private:
     struct TransitionResult {
@@ -160,6 +162,7 @@ private:
     TransitionResult transition_start();
     TransitionResult transition_end();
     TransitionResult transition_operator();
+    TransitionResult transition_single_quoted_string();
 
     size_t m_index { 0 };
     std::string_view m_input;

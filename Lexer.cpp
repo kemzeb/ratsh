@@ -71,6 +71,8 @@ std::string_view Token::type_str() const
         return "Less";
     case Type::Newline:
         return "Newline";
+    case Type::Word:
+        return "Word";
     }
 
     return "Unknown";
@@ -121,6 +123,8 @@ Lexer::TransitionResult Lexer::transition(StateType type)
         return transition_end();
     case StateType::Operator:
         return transition_operator();
+    case StateType::SingleQuotedString:
+        return transition_single_quoted_string();
     }
 
     /// TODO: Provide some form of error-handling if we reach here. We shouldn't return anything.
@@ -143,6 +147,18 @@ Lexer::TransitionResult Lexer::transition_start()
         return TransitionResult {
             .tokens = std::move(tokens),
             .next_state_type = StateType::End
+        };
+    }
+
+    // 4. If the current character is <backslash>, single-quote, or double-quote and it
+    // is not quoted, it shall affect quoting for subsequent characters up to the end of
+    // the quoted text.
+    /// FIXME: Handle backslashes, double quotes, and make sure the current state is not quoted.
+    if (peek_is('\'')) {
+        m_state.buffer += consume();
+        return TransitionResult {
+            .tokens = {},
+            .next_state_type = StateType::SingleQuotedString
         };
     }
 
@@ -247,12 +263,33 @@ Lexer::TransitionResult Lexer::transition_operator()
         if (maybe_token.has_value())
             tokens.push_back(maybe_token.value());
 
-        m_state.buffer.clear();
+        reset_state();
     }
 
     return TransitionResult {
         .tokens = std::move(tokens),
         .next_state_type = StateType::Start
+    };
+}
+
+Lexer::TransitionResult Lexer::transition_single_quoted_string()
+{
+    /// FIXME: What should we do if this transition is given EOF as input?
+
+    auto ch = consume();
+    m_state.buffer += ch;
+
+    if (ch == '\'') {
+        // The token shall not be delimited by the end of the quoted field.
+        return TransitionResult {
+            .tokens = {},
+            .next_state_type = StateType::Start
+        };
+    }
+
+    return TransitionResult {
+        .tokens = {},
+        .next_state_type = StateType::SingleQuotedString
     };
 }
 
