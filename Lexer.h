@@ -18,6 +18,7 @@ enum class StateType {
     End,
     Operator,
     SingleQuotedString,
+    Comment,
 };
 
 struct State {
@@ -48,7 +49,7 @@ struct Token {
         Newline,
 
         // The following are utilized during parsing.
-        Word
+        Word,
     };
 
     Type type;
@@ -134,6 +135,14 @@ struct Token {
         };
     }
 
+    static Token newline()
+    {
+        return {
+            .type = Type::Newline,
+            .value = "\n",
+        };
+    }
+
     std::string_view type_str() const;
 };
 
@@ -163,6 +172,7 @@ private:
     TransitionResult transition_end();
     TransitionResult transition_operator();
     TransitionResult transition_single_quoted_string();
+    TransitionResult transition_comment();
 
     size_t m_index { 0 };
     std::string_view m_input;

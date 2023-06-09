@@ -125,6 +125,8 @@ Lexer::TransitionResult Lexer::transition(StateType type)
         return transition_operator();
     case StateType::SingleQuotedString:
         return transition_single_quoted_string();
+    case StateType::Comment:
+        return transition_comment();
     }
 
     /// TODO: Provide some form of error-handling if we reach here. We shouldn't return anything.
@@ -199,6 +201,16 @@ Lexer::TransitionResult Lexer::transition_start()
         return TransitionResult {
             .tokens = std::move(tokens),
             .next_state_type = StateType::Start
+        };
+    }
+
+    // 9. If the current character is a '#', it and all subsequent characters up to, but
+    // excluding, the next <newline> shall be discarded as a comment. The <newline> that
+    // ends the line is not considered part of the comment.
+    if (peek_is('#')) {
+        return TransitionResult {
+            .tokens = {},
+            .next_state_type = StateType::Comment,
         };
     }
 
@@ -290,6 +302,28 @@ Lexer::TransitionResult Lexer::transition_single_quoted_string()
     return TransitionResult {
         .tokens = {},
         .next_state_type = StateType::SingleQuotedString
+    };
+}
+
+Lexer::TransitionResult Lexer::transition_comment()
+{
+    if (is_eof()) {
+        return TransitionResult {
+            .tokens = {},
+            .next_state_type = StateType::End,
+        };
+    }
+
+    if (consume() == '\n') {
+        return TransitionResult {
+            .tokens = { Token::newline() },
+            .next_state_type = StateType::Start,
+        };
+    }
+
+    return TransitionResult {
+        .tokens = {},
+        .next_state_type = StateType::Comment,
     };
 }
 
