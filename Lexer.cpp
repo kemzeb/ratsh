@@ -250,6 +250,14 @@ Lexer::TransitionResult Lexer::transition_operator()
                 .next_state_type = StateType::End
             };
         }
+
+        // We may have been given char(s) that make up part of an operator but at EOF
+        // aren't an actual operator. Transition to start so that we may run token
+        // recognition rule 1.
+        return TransitionResult {
+            .tokens = {},
+            .next_state_type = StateType::Start,
+        };
     }
 
     // 2. If the previous character was used as part of an operator and the current
