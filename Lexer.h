@@ -23,6 +23,7 @@ enum class StateType {
 
 struct State {
     std::string buffer {};
+    bool is_escaping { false };
 };
 
 struct Token {
@@ -153,13 +154,30 @@ public:
 
     std::vector<Token> batch_next();
 
-    void reset_state();
-
     bool is_eof() const { return m_index >= m_input.length(); }
 
-    char consume();
-    char peek() const;
+    char consume()
+    {
+        if (is_eof())
+            return '\0';
+        return m_input[m_index++];
+    }
+
+    char peek() const
+    {
+        if (is_eof())
+            return '\0';
+        return m_input[m_index];
+    }
+
     bool peek_is(char expected) const { return peek() == expected; };
+
+    void skip()
+    {
+        if (is_eof())
+            return;
+        m_index++;
+    }
 
 private:
     struct TransitionResult {
@@ -173,6 +191,7 @@ private:
     TransitionResult transition_operator();
     TransitionResult transition_single_quoted_string();
     TransitionResult transition_comment();
+    void reset_state();
 
     size_t m_index { 0 };
     std::string_view m_input;

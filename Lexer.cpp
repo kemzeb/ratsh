@@ -78,22 +78,6 @@ std::string_view Token::type_str() const
     return "Unknown";
 }
 
-char Lexer::consume()
-{
-    if (is_eof())
-        return '\0';
-
-    return m_input[m_index++];
-}
-
-char Lexer::peek() const
-{
-    if (is_eof())
-        return '\0';
-
-    return m_input[m_index];
-}
-
 std::vector<Token> Lexer::batch_next()
 {
     while (m_next_state_type != StateType::None) {
@@ -152,71 +136,83 @@ Lexer::TransitionResult Lexer::transition_start()
         };
     }
 
-    // 4. If the current character is <backslash>, single-quote, or double-quote and it
-    // is not quoted, it shall affect quoting for subsequent characters up to the end of
-    // the quoted text.
-    /// FIXME: Handle backslashes, double quotes, and make sure the current state is not quoted.
-    if (peek_is('\'')) {
-        m_state.buffer += consume();
-        return TransitionResult {
-            .tokens = {},
-            .next_state_type = StateType::SingleQuotedString
-        };
-    }
+    if (!m_state.is_escaping) {
+        // 4. If the current character is <backslash>,...
+        if (peek_is('\\')) {
+            m_state.is_escaping = true;
+            m_state.buffer += consume();
+            return TransitionResult {
+                .tokens = {},
+                .next_state_type = StateType::Start,
+            };
+        }
 
-    // 6. If the current character is not quoted and can be used as the first character
-    // of a new operator, the current token (if any) shall be delimited. The current
-    // character shall be used as the beginning of the next (operator) token.
-    /// FIXME: Check for quoting.
-    if (is_part_of_operator("", peek())) {
-        auto maybe_token = Token::generic_token_from(m_state);
-        auto tokens = std::vector<Token> {};
+        // ... a single-quote,...
+        if (peek_is('\'')) {
+            m_state.buffer += consume();
+            return TransitionResult {
+                .tokens = {},
+                .next_state_type = StateType::SingleQuotedString
+            };
+        }
 
-        if (maybe_token.has_value())
-            tokens.push_back(maybe_token.value());
+        /// FIXME: ... or double-quote and it is not quoted, it shall affect quoting for
+        // subsequent characters up to the end of the quoted text.
 
-        reset_state();
-        m_state.buffer += consume();
+        // 6. If the current character is not quoted and can be used as the first
+        // character of a new operator, the current token (if any) shall be delimited.
+        // The current character shall be used as the beginning of the next (operator)
+        // token.
+        if (is_part_of_operator("", peek())) {
+            auto maybe_token = Token::generic_token_from(m_state);
+            auto tokens = std::vector<Token> {};
 
-        return TransitionResult {
-            .tokens = std::move(tokens),
-            .next_state_type = StateType::Operator
-        };
-    }
+            if (maybe_token.has_value())
+                tokens.push_back(maybe_token.value());
 
-    // 7. If the current character is an unquoted <blank>, any token containing the
-    // previous character is delimited and the current character shall be discarded.
-    /// FIXME: Check for quoting.
-    /// NOTE: This check also includes newlines. Be careful when introducing new code!
-    if (isspace(peek()) != 0) {
-        consume();
-        auto maybe_token = Token::generic_token_from(m_state);
-        auto tokens = std::vector<Token> {};
+            reset_state();
+            m_state.buffer += consume();
 
-        if (maybe_token.has_value())
-            tokens.push_back(maybe_token.value());
+            return TransitionResult {
+                .tokens = std::move(tokens),
+                .next_state_type = StateType::Operator,
+            };
+        }
 
-        reset_state();
+        // 7. If the current character is an unquoted <blank>, any token containing the
+        // previous character is delimited and the current character shall be discarded.
+        if (isspace(peek()) != 0) {
+            skip();
 
-        return TransitionResult {
-            .tokens = std::move(tokens),
-            .next_state_type = StateType::Start
-        };
-    }
+            auto maybe_token = Token::generic_token_from(m_state);
+            auto tokens = std::vector<Token> {};
 
-    // 9. If the current character is a '#', it and all subsequent characters up to, but
-    // excluding, the next <newline> shall be discarded as a comment. The <newline> that
-    // ends the line is not considered part of the comment.
-    if (peek_is('#')) {
-        return TransitionResult {
-            .tokens = {},
-            .next_state_type = StateType::Comment,
-        };
+            if (maybe_token.has_value())
+                tokens.push_back(maybe_token.value());
+
+            reset_state();
+
+            return TransitionResult {
+                .tokens = std::move(tokens),
+                .next_state_type = StateType::Start
+            };
+        }
+
+        // 9. If the current character is a '#', it and all subsequent characters up to,
+        // but excluding, the next <newline> shall be discarded as a comment. The
+        // <newline> that ends the line is not considered part of the comment.
+        if (peek_is('#')) {
+            return TransitionResult {
+                .tokens = {},
+                .next_state_type = StateType::Comment,
+            };
+        }
     }
 
     // 8. If the previous character was part of a word, the current character shall be
     // appended to that word.
     // 10. The current character is used as the start of a new word.
+    m_state.is_escaping = false;
     m_state.buffer += consume();
     return TransitionResult {
         .tokens = {},
@@ -263,7 +259,6 @@ Lexer::TransitionResult Lexer::transition_operator()
     // 2. If the previous character was used as part of an operator and the current
     // character is not quoted and can be used with the previous characters to form an
     // operator, it shall be used as part of that (operator) token.
-    /// FIXME: Check for quoting.
     if (is_part_of_operator(m_state.buffer, peek())) {
         m_state.buffer += consume();
 
@@ -300,7 +295,7 @@ Lexer::TransitionResult Lexer::transition_single_quoted_string()
     m_state.buffer += ch;
 
     if (ch == '\'') {
-        // The token shall not be delimited by the end of the quoted field.
+        // "The token shall not be delimited by the end of the quoted field."
         return TransitionResult {
             .tokens = {},
             .next_state_type = StateType::Start
