@@ -195,7 +195,7 @@ Lexer::TransitionResult Lexer::transition_start()
 
         // 7. If the current character is an unquoted <blank>, any token containing the
         // previous character is delimited and the current character shall be discarded.
-        if (isspace(peek()) != 0) {
+        if (isblank(peek()) != 0) {
             auto maybe_token = Token::generic_token_from(m_state);
             auto tokens = std::vector<Token> {};
             skip();
