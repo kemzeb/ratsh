@@ -18,10 +18,13 @@ int main()
     std::cout << "> ";
     while (true) {
         getline(std::cin, input);
-
         if (input == "exit")
             return 0;
 
+        if (!std::cin.good())
+            std::cerr << "An unknown error has occurred\n";
+
+        input.push_back('\n'); // Add this so that newlines can be lexed.
         auto code = shell->run_command(input);
 
         if (code != 0)

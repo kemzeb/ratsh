@@ -136,7 +136,21 @@ Lexer::TransitionResult Lexer::transition_start()
         };
     }
 
-    if (!m_state.is_escaping) {
+    if (m_state.is_escaping) {
+        if (peek_is('\n')) {
+            // (2.2.1) If a <newline> follows the <backslash>, the shell shall interpret
+            // this as line continuation. The <backslash> and <newline> shall be removed
+            // before splitting the input into tokens.
+            m_state.is_escaping = false;
+            m_state.buffer.pop_back(); // Remove the '\' we added earlier.
+            skip();
+
+            return TransitionResult {
+                .tokens = {},
+                .next_state_type = StateType::Start,
+            };
+        }
+    } else {
         // 4. If the current character is <backslash>,...
         if (peek_is('\\')) {
             m_state.is_escaping = true;
@@ -182,10 +196,9 @@ Lexer::TransitionResult Lexer::transition_start()
         // 7. If the current character is an unquoted <blank>, any token containing the
         // previous character is delimited and the current character shall be discarded.
         if (isspace(peek()) != 0) {
-            skip();
-
             auto maybe_token = Token::generic_token_from(m_state);
             auto tokens = std::vector<Token> {};
+            skip();
 
             if (maybe_token.has_value())
                 tokens.push_back(maybe_token.value());
