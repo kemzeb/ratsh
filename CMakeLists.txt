@@ -18,10 +18,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/CMake)
 
+enable_testing()
+include(FetchGoogleTest)
 include(GoogleTest)
 
-add_executable(ratsh
-    main.cpp
+set(sources
     AST.h
     Shell.cpp
     Shell.h
@@ -30,6 +31,17 @@ add_executable(ratsh
     Parser.h
     Parser.cpp
 )
+add_library(ratsh STATIC ${sources})
+add_executable(main main.cpp)
+target_link_libraries(main ratsh)
 
-target_link_libraries(ratsh gtest_main)
-
+add_executable(
+    tests
+    Tests/TestLexer.cpp
+)
+target_link_libraries(
+    tests
+    GTest::gtest_main
+    ratsh
+)
+gtest_discover_tests(tests)

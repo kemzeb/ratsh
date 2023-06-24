@@ -73,6 +73,8 @@ std::string_view Token::type_str() const
         return "Newline";
     case Type::Word:
         return "Word";
+    case Type::IoNumber:
+        return "IoNumber";
     }
 
     return "Unknown";
@@ -109,6 +111,8 @@ Lexer::TransitionResult Lexer::transition(StateType type)
         return transition_operator();
     case StateType::SingleQuotedString:
         return transition_single_quoted_string();
+    case StateType::IoNumber:
+        return transition_io_number();
     case StateType::Comment:
         return transition_comment();
     }
@@ -208,6 +212,18 @@ Lexer::TransitionResult Lexer::transition_start()
             return TransitionResult {
                 .tokens = std::move(tokens),
                 .next_state_type = StateType::Start
+            };
+        }
+
+        // (2.10.1) If the string consists solely of digits and the delimiter character
+        // is one of '<' or '>', the token identifier IO_NUMBER shall be returned.
+        /// NOTE: This should be the first digit we encountered. The buffer should not
+        /// contain anything.
+        if (isdigit(static_cast<unsigned char>(peek())) != 0 && m_state.buffer.empty()) {
+            m_state.buffer += consume();
+            return TransitionResult {
+                .tokens = {},
+                .next_state_type = StateType::IoNumber,
             };
         }
 
@@ -318,6 +334,41 @@ Lexer::TransitionResult Lexer::transition_single_quoted_string()
     return TransitionResult {
         .tokens = {},
         .next_state_type = StateType::SingleQuotedString
+    };
+}
+
+Lexer::TransitionResult Lexer::transition_io_number()
+{
+    if (is_eof()) {
+        return TransitionResult {
+            .tokens = {},
+            .next_state_type = StateType::Start,
+        };
+    }
+
+    if (peek_is('<') || peek_is('>')) {
+        auto token = Token { Token::Type::IoNumber, std::move(m_state.buffer) };
+
+        reset_state();
+
+        return TransitionResult {
+            .tokens = { std::move(token) },
+            .next_state_type = StateType::Start,
+        };
+    }
+
+    if (isdigit(static_cast<unsigned char>(peek())) != 0) {
+        m_state.buffer += consume();
+        return TransitionResult {
+            .tokens = {},
+            .next_state_type = StateType::IoNumber,
+        };
+    }
+
+    // We are no longer dealing with digits e.g. 10.txt and we peeked the period.
+    return TransitionResult {
+        .tokens = {},
+        .next_state_type = StateType::Start,
     };
 }
 

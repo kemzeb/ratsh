@@ -18,6 +18,7 @@ enum class StateType {
     End,
     Operator,
     SingleQuotedString,
+    IoNumber,
     Comment,
 };
 
@@ -47,6 +48,7 @@ struct Token {
         CloseParen,
         Great,
         Less,
+        IoNumber,
         Newline,
 
         // The following are utilized during parsing.
@@ -190,6 +192,7 @@ private:
     TransitionResult transition_end();
     TransitionResult transition_operator();
     TransitionResult transition_single_quoted_string();
+    TransitionResult transition_io_number();
     TransitionResult transition_comment();
     void reset_state();
 
