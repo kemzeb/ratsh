@@ -24,6 +24,16 @@ bool is_part_of_operator(std::string_view text, char ch)
     return is_operator(str);
 }
 
+bool isblank(char ch)
+{
+    return std::isblank(static_cast<unsigned char>(ch)) != 0;
+}
+
+bool isdigit(char ch)
+{
+    return std::isdigit(static_cast<unsigned char>(ch)) != 0;
+}
+
 }
 
 namespace RatShell {
@@ -199,7 +209,7 @@ Lexer::TransitionResult Lexer::transition_start()
 
         // 7. If the current character is an unquoted <blank>, any token containing the
         // previous character is delimited and the current character shall be discarded.
-        if (isblank(peek()) != 0) {
+        if (isblank(peek())) {
             auto maybe_token = Token::generic_token_from(m_state);
             auto tokens = std::vector<Token> {};
             skip();
@@ -219,7 +229,7 @@ Lexer::TransitionResult Lexer::transition_start()
         // is one of '<' or '>', the token identifier IO_NUMBER shall be returned.
         /// NOTE: This should be the first digit we encountered. The buffer should not
         /// contain anything.
-        if (isdigit(static_cast<unsigned char>(peek())) != 0 && m_state.buffer.empty()) {
+        if (isdigit(peek()) && m_state.buffer.empty()) {
             m_state.buffer += consume();
             return TransitionResult {
                 .tokens = {},
@@ -357,7 +367,7 @@ Lexer::TransitionResult Lexer::transition_io_number()
         };
     }
 
-    if (isdigit(static_cast<unsigned char>(peek())) != 0) {
+    if (isdigit(peek())) {
         m_state.buffer += consume();
         return TransitionResult {
             .tokens = {},
