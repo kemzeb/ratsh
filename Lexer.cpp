@@ -53,7 +53,7 @@ std::string_view Token::type_str() const
         return "DoubleSemicolon";
     case Type::DoubleLessThan:
         return "DoubleLessThan";
-    case Type::DoubleGreaterThan:
+    case Type::DoubleGreat:
         return "DoubleGreaterThan";
     case Type::LessAnd:
         return "LessAnd";

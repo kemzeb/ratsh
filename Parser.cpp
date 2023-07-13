@@ -95,7 +95,7 @@ std::shared_ptr<AST::Node> Parser::parse_io_file(std::optional<int> io_number)
     case Token::Type::LessAnd:
     case Token::Type::Great:
     case Token::Type::GreatAnd:
-    case Token::Type::DoubleGreaterThan:
+    case Token::Type::DoubleGreat:
     case Token::Type::LessGreat:
     case Token::Type::Clobber:
         is_valid_op = true;
@@ -117,7 +117,7 @@ std::shared_ptr<AST::Node> Parser::parse_io_file(std::optional<int> io_number)
         return std::make_shared<AST::Redirection>(filename.value, io_number.value_or(0), AST::Redirection::Flags::Read);
     case Token::Type::Great:
         return std::make_shared<AST::Redirection>(filename.value, io_number.value_or(1), AST::Redirection::Flags::Write);
-    case Token::Type::DoubleGreaterThan:
+    case Token::Type::DoubleGreat:
         return std::make_shared<AST::Redirection>(filename.value, io_number.value_or(1), AST::Redirection::Flags::WriteAppend);
     case Token::Type::LessGreat:
         return std::make_shared<AST::Redirection>(filename.value, io_number.value_or(0), AST::Redirection::Flags::ReadWrite);

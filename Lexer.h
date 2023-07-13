@@ -35,7 +35,7 @@ struct Token {
         OrIf,
         DoubleSemicolon,
         DoubleLessThan,
-        DoubleGreaterThan,
+        DoubleGreat,
         LessAnd,
         GreatAnd,
         LessGreat,
@@ -85,7 +85,7 @@ struct Token {
         if (text == "<<")
             return Token::Type::DoubleLessThan;
         if (text == ">>")
-            return Token::Type::DoubleGreaterThan;
+            return Token::Type::DoubleGreat;
         if (text == "<&")
             return Token::Type::LessAnd;
         if (text == ">&")
