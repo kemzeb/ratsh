@@ -27,6 +27,9 @@ std::shared_ptr<Value> Redirection::eval() const
     case Flags::Read:
         open_flags |= O_RDONLY;
         break;
+    case Flags::ReadWrite:
+        open_flags |= O_CREAT | O_RDWR;
+        break;
     case Flags::Write:
         open_flags |= O_CREAT | O_WRONLY | O_TRUNC;
         break;

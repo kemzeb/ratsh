@@ -119,6 +119,8 @@ std::shared_ptr<AST::Node> Parser::parse_io_file(std::optional<int> io_number)
         return std::make_shared<AST::Redirection>(filename.value, io_number.value_or(1), AST::Redirection::Flags::Write);
     case Token::Type::DoubleGreaterThan:
         return std::make_shared<AST::Redirection>(filename.value, io_number.value_or(1), AST::Redirection::Flags::WriteAppend);
+    case Token::Type::LessGreat:
+        return std::make_shared<AST::Redirection>(filename.value, io_number.value_or(0), AST::Redirection::Flags::ReadWrite);
     }
 
     return nullptr;

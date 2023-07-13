@@ -51,6 +51,7 @@ class Redirection final : public Node {
 public:
     enum class Flags {
         Read,
+        ReadWrite,
         Write,
         WriteAppend
     };
