@@ -50,7 +50,8 @@ private:
 class Redirection final : public Node {
 public:
     enum class Flags {
-        Write
+        Write,
+        WriteAppend
     };
 
     Redirection(std::string path, int fd, Flags flag)

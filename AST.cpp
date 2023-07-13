@@ -26,9 +26,13 @@ std::shared_ptr<Value> Redirection::eval() const
     switch (flags()) {
     case Flags::Write:
         open_flags |= O_WRONLY | O_TRUNC;
-        value = std::make_shared<RedirectionValue>(path(), fd(), open_flags);
+        break;
+    case Flags::WriteAppend:
+        open_flags |= O_WRONLY | O_APPEND;
+        break;
     }
-    return move(value);
+
+    return std::make_shared<RedirectionValue>(path(), fd(), open_flags);
 }
 
 std::shared_ptr<Value> CastListToCommand::eval() const

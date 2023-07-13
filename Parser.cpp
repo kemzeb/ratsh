@@ -115,6 +115,8 @@ std::shared_ptr<AST::Node> Parser::parse_io_file(std::optional<int> io_number)
     switch (io_operator.type) {
     case Token::Type::Great:
         return std::make_shared<AST::Redirection>(filename.value, io_number.value_or(1), AST::Redirection::Flags::Write);
+    case Token::Type::DoubleGreaterThan:
+        return std::make_shared<AST::Redirection>(filename.value, io_number.value_or(1), AST::Redirection::Flags::WriteAppend);
     }
 
     return nullptr;
