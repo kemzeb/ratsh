@@ -21,14 +21,17 @@ std::shared_ptr<Value> Execute::eval() const
 std::shared_ptr<Value> Redirection::eval() const
 {
     std::shared_ptr<RedirectionValue> value;
-    int open_flags = O_CREAT;
+    int open_flags = 0;
 
     switch (flags()) {
+    case Flags::Read:
+        open_flags |= O_RDONLY;
+        break;
     case Flags::Write:
-        open_flags |= O_WRONLY | O_TRUNC;
+        open_flags |= O_CREAT | O_WRONLY | O_TRUNC;
         break;
     case Flags::WriteAppend:
-        open_flags |= O_WRONLY | O_APPEND;
+        open_flags |= O_CREAT | O_WRONLY | O_APPEND;
         break;
     }
 
