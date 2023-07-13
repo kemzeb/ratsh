@@ -8,6 +8,8 @@
 #include "AST.h"
 #include "Lexer.h"
 #include <memory>
+#include <optional>
+#include <string>
 
 namespace RatShell {
 
@@ -45,21 +47,77 @@ void Parser::fill_token_buffer()
 
 std::shared_ptr<AST::Node> Parser::parse_simple_command()
 {
-    /// FIXME: Implement cmd_prefix-related grammar rules.
-    /// FIXME: Implement redirection.
-
+    std::vector<std::shared_ptr<AST::Node>> nodes;
     std::vector<std::string> argv;
+
+    /// TODO: Support prefixed redirection operators and also assginment words.
+
+    if (peek().type == Token::Type::Word) {
+        /// TODO: Differentiate between cmd_name and cmd_word grammar.
+        argv.push_back(consume().value);
+    } else {
+        return nullptr;
+    }
+
     while (true) {
         if (peek().type == Token::Type::Word) {
-            /// FIXME: The spec wants rule 1 applied if we encounter cmd_name-related grammar rules.
-            auto token = consume();
-            argv.push_back(token.value);
+            argv.push_back(consume().value);
+        } else if (auto io_redirect = parse_io_redirect()) {
+            nodes.push_back(io_redirect);
         } else {
             break;
         }
     }
+    nodes.push_back(std::make_shared<AST::Execute>(argv));
 
-    return std::make_shared<AST::Execute>(argv);
+    return std::make_shared<AST::CastListToCommand>(nodes);
 }
 
+std::shared_ptr<AST::Node> Parser::parse_io_redirect()
+{
+    std::optional<int> io_number;
+
+    if (peek().type == Token::Type::IoNumber) {
+        io_number = std::stoi(consume().value);
+    }
+
+    if (auto io_file = parse_io_file(io_number))
+        return io_file;
+
+    return nullptr;
 }
+
+std::shared_ptr<AST::Node> Parser::parse_io_file(std::optional<int> io_number)
+{
+    auto is_valid_op = false;
+    switch (peek().type) {
+    case Token::Type::Less:
+    case Token::Type::LessAnd:
+    case Token::Type::Great:
+    case Token::Type::GreatAnd:
+    case Token::Type::DoubleGreaterThan:
+    case Token::Type::LessGreat:
+    case Token::Type::Clobber:
+        is_valid_op = true;
+    }
+
+    if (!is_valid_op)
+        return nullptr;
+
+    auto io_operator = consume();
+
+    /// FIXME: This should be an error.
+    if (peek().type != Token::Type::Word)
+        return nullptr;
+
+    auto filename = consume();
+
+    switch (io_operator.type) {
+    case Token::Type::Great:
+        return std::make_shared<AST::Redirection>(filename.value, io_number.value_or(1), AST::Redirection::Flags::Write);
+    }
+
+    return nullptr;
+}
+
+} // namespace RatShell

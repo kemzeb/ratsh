@@ -24,12 +24,16 @@ include(GoogleTest)
 
 set(sources
     AST.h
-    Shell.cpp
-    Shell.h
+    AST.cpp
+    FileDescription.h
+    FileDescription.cpp
     Lexer.cpp
     Lexer.h
     Parser.h
     Parser.cpp
+    Shell.cpp
+    Shell.h
+    Value.h
 )
 add_library(ratsh STATIC ${sources})
 add_executable(main main.cpp)
