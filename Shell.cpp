@@ -63,8 +63,18 @@ bool resolve_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& 
         } else if (redir->action == RedirectionValue::Action::Close) {
             close(fd);
         } else {
-            /// FIXME: We need to check, depending on the operator given, if the file
-            /// is open for input or output.
+            int flags = fcntl(fd, F_GETFL);
+            if (flags < 0) {
+                perror("fcntl");
+                return false;
+            }
+            if (redir->action == RedirectionValue::Action::OutputDup) {
+                if ((flags & O_RDONLY) != 0) {
+                    perror("not open for output");
+                    return false; // File is not open for input
+                }
+            }
+
             auto const& new_fd = std::get<int>(redir_variant);
             dups.push_back({ new_fd, fd });
         }

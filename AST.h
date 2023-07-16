@@ -80,23 +80,31 @@ private:
     Flags m_flags;
 };
 
-class DuplicateRedirection final : public Node {
+class DupRedirection final : public Node {
 public:
-    DuplicateRedirection(int left_fd, std::optional<int> right_fd)
-        : m_left_fd(left_fd)
+    enum class Type {
+        Input,
+        Output
+    };
+
+    DupRedirection(Type type, int left_fd, std::optional<int> right_fd)
+        : m_type(type)
+        , m_left_fd(left_fd)
         , m_right_fd(right_fd)
     {
     }
 
-    virtual ~DuplicateRedirection() = default;
+    virtual ~DupRedirection() = default;
 
     virtual std::shared_ptr<Value> eval() const override;
     virtual Kind kind() const override { return Kind::DuplicateRedirection; }
 
     int left_fd() const { return m_left_fd; }
     std::optional<int> const& right_fd() const { return m_right_fd; }
+    Type type() const { return m_type; }
 
 private:
+    Type m_type { Type::Input };
     int m_left_fd { -1 };
     std::optional<int> m_right_fd;
 };

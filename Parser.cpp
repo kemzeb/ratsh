@@ -114,12 +114,15 @@ std::shared_ptr<AST::Node> Parser::parse_io_file(std::optional<int> io_number)
     auto filename = consume();
 
     if (io_operator.type == Token::Type::GreatAnd) {
-        if (filename.value == "-")
-            return std::make_shared<AST::DuplicateRedirection>(io_number.value_or(1), std::nullopt);
+        int left_fd = io_number.value_or(1);
+        std::optional<int> right_fd = std::nullopt;
+
         if (all_of(filename.value.begin(), filename.value.end(), [](unsigned char c) { return std::isdigit(c); }))
-            return std::make_shared<AST::DuplicateRedirection>(io_number.value_or(1), std::stoi(filename.value));
-        /// FIXME: Should be an error!!
-        return nullptr;
+            right_fd = std::stoi(filename.value);
+        else if (filename.value != "-")
+            return nullptr; /// FIXME: This should be an error.
+
+        return std::make_shared<AST::DupRedirection>(AST::DupRedirection::Type::Output, left_fd, right_fd);
     }
 
     switch (io_operator.type) {

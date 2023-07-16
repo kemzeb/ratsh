@@ -41,12 +41,16 @@ std::shared_ptr<Value> PathRedirection::eval() const
     return std::make_shared<RedirectionValue>(fd(), path_data);
 }
 
-std::shared_ptr<Value> DuplicateRedirection::eval() const
+std::shared_ptr<Value> DupRedirection::eval() const
 {
-    if (m_right_fd.has_value())
-        return std::make_shared<RedirectionValue>(left_fd(), right_fd().value());
+    if (!m_right_fd.has_value())
+        return std::make_shared<RedirectionValue>(left_fd());
 
-    return std::make_shared<RedirectionValue>(left_fd());
+    int right_fd = m_right_fd.value();
+    if (type() == Type::Input)
+        return std::make_shared<RedirectionValue>(left_fd(), RedirectionValue::Action::InputDup, right_fd);
+
+    return std::make_shared<RedirectionValue>(left_fd(), RedirectionValue::Action::OutputDup, right_fd);
 }
 
 std::shared_ptr<Value> CastListToCommand::eval() const

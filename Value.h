@@ -20,9 +20,10 @@ struct Value {
 
 struct RedirectionValue final : public Value {
     enum class Action {
+        Open,
         Close,
-        Dup,
-        Open
+        InputDup,
+        OutputDup
     };
 
     struct PathData {
@@ -42,9 +43,14 @@ struct RedirectionValue final : public Value {
             auto const& new_fd = std::get<int>(redir_variant);
             if (new_fd < 0)
                 action = Action::Close;
-            else
-                action = Action::Dup;
         }
+    }
+
+    RedirectionValue(int io_number, Action action, std::variant<PathData, int>&& variant)
+        : io_number(io_number)
+        , action(action)
+        , redir_variant(std::move(variant))
+    {
     }
 
     virtual bool is_redirection() const override { return true; }
