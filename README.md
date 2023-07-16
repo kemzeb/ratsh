@@ -24,4 +24,4 @@ To run, use the following command:
 
 `./build/main`
 
-This project mainly exists just for the purposes of fun and education, but I do wish to see it provide much of the convience and features that we see in the shells we use reguarly.
+This project mainly exists just for the purposes of fun and education, but I do wish to see it provide much of the convenience and features that we see in the shells we use reguarly.
