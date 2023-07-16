@@ -63,20 +63,26 @@ bool resolve_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& 
         } else if (redir->action == RedirectionValue::Action::Close) {
             close(fd);
         } else {
-            int flags = fcntl(fd, F_GETFL);
+            auto const& right_fd = std::get<int>(redir_variant);
+            int flags = fcntl(right_fd, F_GETFL);
+
             if (flags < 0) {
                 perror("fcntl");
                 return false;
             }
-            if (redir->action == RedirectionValue::Action::OutputDup) {
-                if ((flags & O_RDONLY) != 0) {
-                    perror("not open for output");
-                    return false; // File is not open for input
-                }
+
+            auto access = flags & O_ACCMODE;
+
+            if (redir->action == RedirectionValue::Action::OutputDup && access == O_RDONLY) {
+                perror("not open for output");
+                return false; // File is not open for input
+            }
+            if (redir->action == RedirectionValue::Action::InputDup && access == O_WRONLY) {
+                perror("not open for input");
+                return false; // File is not open for input
             }
 
-            auto const& new_fd = std::get<int>(redir_variant);
-            dups.push_back({ new_fd, fd });
+            dups.push_back({ right_fd, fd });
         }
     }
 

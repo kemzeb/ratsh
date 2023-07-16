@@ -113,18 +113,6 @@ std::shared_ptr<AST::Node> Parser::parse_io_file(std::optional<int> io_number)
 
     auto filename = consume();
 
-    if (io_operator.type == Token::Type::GreatAnd) {
-        int left_fd = io_number.value_or(1);
-        std::optional<int> right_fd = std::nullopt;
-
-        if (all_of(filename.value.begin(), filename.value.end(), [](unsigned char c) { return std::isdigit(c); }))
-            right_fd = std::stoi(filename.value);
-        else if (filename.value != "-")
-            return nullptr; /// FIXME: This should be an error.
-
-        return std::make_shared<AST::DupRedirection>(AST::DupRedirection::Type::Output, left_fd, right_fd);
-    }
-
     switch (io_operator.type) {
     case Token::Type::Less:
         return std::make_shared<AST::PathRedirection>(filename.value, io_number.value_or(0), AST::PathRedirection::Flags::Read);
@@ -134,6 +122,24 @@ std::shared_ptr<AST::Node> Parser::parse_io_file(std::optional<int> io_number)
         return std::make_shared<AST::PathRedirection>(filename.value, io_number.value_or(1), AST::PathRedirection::Flags::WriteAppend);
     case Token::Type::LessGreat:
         return std::make_shared<AST::PathRedirection>(filename.value, io_number.value_or(0), AST::PathRedirection::Flags::ReadWrite);
+    case Token::Type::GreatAnd:
+    case Token::Type::LessAnd: {
+        int left_fd = io_number.value_or(1);
+        std::optional<int> right_fd = std::nullopt;
+        AST::DupRedirection::Type type = AST::DupRedirection::Type::Output;
+
+        if (io_operator.type == Token::Type::LessAnd) {
+            left_fd = io_number.value_or(0);
+            type = AST::DupRedirection::Type::Input;
+        }
+
+        if (all_of(filename.value.begin(), filename.value.end(), [](unsigned char c) { return std::isdigit(c); }))
+            right_fd = std::stoi(filename.value);
+        else if (filename.value != "-")
+            return nullptr; /// FIXME: This should be an error.
+
+        return std::make_shared<AST::DupRedirection>(left_fd, right_fd, type);
+    }
     }
 
     return nullptr;

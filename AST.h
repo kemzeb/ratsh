@@ -87,10 +87,10 @@ public:
         Output
     };
 
-    DupRedirection(Type type, int left_fd, std::optional<int> right_fd)
-        : m_type(type)
-        , m_left_fd(left_fd)
+    DupRedirection(int left_fd, std::optional<int> right_fd, Type type)
+        : m_left_fd(left_fd)
         , m_right_fd(right_fd)
+        , m_type(type)
     {
     }
 
@@ -104,9 +104,9 @@ public:
     Type type() const { return m_type; }
 
 private:
-    Type m_type { Type::Input };
     int m_left_fd { -1 };
     std::optional<int> m_right_fd;
+    Type m_type { Type::Input };
 };
 
 class CastListToCommand final : public Node {
