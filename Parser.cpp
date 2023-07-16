@@ -7,6 +7,7 @@
 #include "Parser.h"
 #include "AST.h"
 #include "Lexer.h"
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <string>
@@ -112,15 +113,24 @@ std::shared_ptr<AST::Node> Parser::parse_io_file(std::optional<int> io_number)
 
     auto filename = consume();
 
+    if (io_operator.type == Token::Type::GreatAnd) {
+        if (filename.value == "-")
+            return std::make_shared<AST::DuplicateRedirection>(io_number.value_or(1), std::nullopt);
+        if (all_of(filename.value.begin(), filename.value.end(), [](unsigned char c) { return std::isdigit(c); }))
+            return std::make_shared<AST::DuplicateRedirection>(io_number.value_or(1), std::stoi(filename.value));
+        /// FIXME: Should be an error!!
+        return nullptr;
+    }
+
     switch (io_operator.type) {
     case Token::Type::Less:
-        return std::make_shared<AST::Redirection>(filename.value, io_number.value_or(0), AST::Redirection::Flags::Read);
+        return std::make_shared<AST::PathRedirection>(filename.value, io_number.value_or(0), AST::PathRedirection::Flags::Read);
     case Token::Type::Great:
-        return std::make_shared<AST::Redirection>(filename.value, io_number.value_or(1), AST::Redirection::Flags::Write);
+        return std::make_shared<AST::PathRedirection>(filename.value, io_number.value_or(1), AST::PathRedirection::Flags::Write);
     case Token::Type::DoubleGreat:
-        return std::make_shared<AST::Redirection>(filename.value, io_number.value_or(1), AST::Redirection::Flags::WriteAppend);
+        return std::make_shared<AST::PathRedirection>(filename.value, io_number.value_or(1), AST::PathRedirection::Flags::WriteAppend);
     case Token::Type::LessGreat:
-        return std::make_shared<AST::Redirection>(filename.value, io_number.value_or(0), AST::Redirection::Flags::ReadWrite);
+        return std::make_shared<AST::PathRedirection>(filename.value, io_number.value_or(0), AST::PathRedirection::Flags::ReadWrite);
     }
 
     return nullptr;

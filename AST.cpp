@@ -18,9 +18,8 @@ std::shared_ptr<Value> Execute::eval() const
     return move(command);
 }
 
-std::shared_ptr<Value> Redirection::eval() const
+std::shared_ptr<Value> PathRedirection::eval() const
 {
-    std::shared_ptr<RedirectionValue> value;
     int open_flags = 0;
 
     switch (flags()) {
@@ -38,7 +37,16 @@ std::shared_ptr<Value> Redirection::eval() const
         break;
     }
 
-    return std::make_shared<RedirectionValue>(path(), fd(), open_flags);
+    auto path_data = RedirectionValue::PathData { .path = path(), .flags = open_flags };
+    return std::make_shared<RedirectionValue>(fd(), path_data);
+}
+
+std::shared_ptr<Value> DuplicateRedirection::eval() const
+{
+    if (m_right_fd.has_value())
+        return std::make_shared<RedirectionValue>(left_fd(), right_fd().value());
+
+    return std::make_shared<RedirectionValue>(left_fd());
 }
 
 std::shared_ptr<Value> CastListToCommand::eval() const

@@ -8,6 +8,7 @@
 
 #include "Value.h"
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -17,7 +18,8 @@ class Node {
 public:
     enum class Kind {
         Execute,
-        Redirection,
+        DuplicateRedirection,
+        PathRedirection,
 
         // The following are considered "convenience" nodes.
         CastListToCommand
@@ -47,7 +49,7 @@ private:
     std::vector<std::string> m_argv;
 };
 
-class Redirection final : public Node {
+class PathRedirection final : public Node {
 public:
     enum class Flags {
         Read,
@@ -56,17 +58,17 @@ public:
         WriteAppend
     };
 
-    Redirection(std::string path, int fd, Flags flag)
+    PathRedirection(std::string path, int fd, Flags flag)
         : m_path(std::move(path))
         , m_fd(fd)
         , m_flags(flag)
     {
     }
 
-    virtual ~Redirection() = default;
+    virtual ~PathRedirection() = default;
 
     virtual std::shared_ptr<Value> eval() const override;
-    virtual Kind kind() const override { return Kind::Redirection; }
+    virtual Kind kind() const override { return Kind::PathRedirection; }
 
     std::string const& path() const { return m_path; }
     int fd() const { return m_fd; }
@@ -76,6 +78,27 @@ private:
     std::string m_path;
     int m_fd { -1 };
     Flags m_flags;
+};
+
+class DuplicateRedirection final : public Node {
+public:
+    DuplicateRedirection(int left_fd, std::optional<int> right_fd)
+        : m_left_fd(left_fd)
+        , m_right_fd(right_fd)
+    {
+    }
+
+    virtual ~DuplicateRedirection() = default;
+
+    virtual std::shared_ptr<Value> eval() const override;
+    virtual Kind kind() const override { return Kind::DuplicateRedirection; }
+
+    int left_fd() const { return m_left_fd; }
+    std::optional<int> const& right_fd() const { return m_right_fd; }
+
+private:
+    int m_left_fd { -1 };
+    std::optional<int> m_right_fd;
 };
 
 class CastListToCommand final : public Node {

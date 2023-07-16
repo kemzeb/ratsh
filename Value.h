@@ -8,7 +8,10 @@
 
 #include <memory>
 #include <string>
+#include <variant>
 #include <vector>
+
+namespace RatShell {
 
 struct Value {
     virtual bool is_command() const { return false; }
@@ -16,16 +19,32 @@ struct Value {
 };
 
 struct RedirectionValue final : public Value {
-    std::string path;
-    int fd { -1 };
-    int flags { -1 };
+    enum class Action {
+        Close,
+        Dup,
+        Open
+    };
 
-    RedirectionValue() = delete;
-    RedirectionValue(std::string path, int fd, int flags)
-        : path(std::move(path))
-        , fd(fd)
-        , flags(flags)
+    struct PathData {
+        std::string path;
+        int flags { -1 };
+    };
+
+    int io_number { -1 };
+    Action action { Action::Open };
+    std::variant<PathData, int> redir_variant;
+
+    RedirectionValue(int io_number, std::variant<PathData, int>&& variant = -1)
+        : io_number(io_number)
+        , redir_variant(std::move(variant))
     {
+        if (std::holds_alternative<int>(redir_variant)) {
+            auto const& new_fd = std::get<int>(redir_variant);
+            if (new_fd < 0)
+                action = Action::Close;
+            else
+                action = Action::Dup;
+        }
     }
 
     virtual bool is_redirection() const override { return true; }
@@ -37,3 +56,5 @@ struct CommandValue final : public Value {
 
     virtual bool is_command() const override { return true; }
 };
+
+}; // namespace RatShell

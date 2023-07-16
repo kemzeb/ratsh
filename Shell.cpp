@@ -14,30 +14,20 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <variant>
 #include <vector>
 
 namespace RatShell {
 
 namespace {
 
-/// TODO: Is there a better way to design how redirection data is stored and manipulated?
 bool resolve_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& redirections, FileDescriptionCollector& fds, SavedFileDescriptions& saved_fds)
 {
     std::vector<std::pair<int, int>> dups;
 
     for (auto const& redir : redirections) {
-        auto fd = redir->fd;
-        auto path = redir->path;
-        auto mode = redir->flags;
-
-        // Open a file using the given path.
-        auto path_fd = open(path.c_str(), mode, 0666);
-        if (path_fd < 0) {
-            perror("internal: Unable to open for appending");
-            return false;
-        }
-
-        fds.add(path_fd);
+        auto fd = redir->io_number;
+        auto const& redir_variant = redir->redir_variant;
 
         // Duplicate fd so we may restore it when the parent returns from the fork call.
         auto saved_fd = dup(fd);
@@ -56,13 +46,30 @@ bool resolve_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& 
             return false;
         }
 
-        dups.push_back({ path_fd, fd });
+        if (redir->action == RedirectionValue::Action::Open) {
+            auto const& data = std::get<RedirectionValue::PathData>(redir_variant);
+            auto path = data.path;
+            auto mode = data.flags;
+
+            // Open a file using the given path.
+            auto path_fd = open(path.c_str(), mode, 0666);
+            if (path_fd < 0) {
+                perror("internal: Unable to open for appending");
+                return false;
+            }
+
+            fds.add(path_fd);
+            dups.push_back({ path_fd, fd });
+        } else if (redir->action == RedirectionValue::Action::Close) {
+            close(fd);
+        } else {
+            /// FIXME: We need to check, depending on the operator given, if the file
+            /// is open for input or output.
+            auto const& new_fd = std::get<int>(redir_variant);
+            dups.push_back({ new_fd, fd });
+        }
     }
 
-    /// NOTE: We need this separate pass as a command line such as
-    // /bin/cat hello.txt > a.txt > b.txt would not work well in a single pass.
-    // stdout would end up referencing a.txt when we restore it since stdout pointed to
-    // the file description of a.txt in the previous iteration.
     for (auto& dup : dups) {
         auto path_fd = dup.first;
         auto fd_to_redirect = dup.second;
