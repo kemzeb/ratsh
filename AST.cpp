@@ -11,11 +11,16 @@
 
 namespace RatShell::AST {
 
+std::shared_ptr<Value> SyntaxError::eval() const
+{
+    return nullptr;
+}
+
 std::shared_ptr<Value> Execute::eval() const
 {
     auto command = std::make_shared<CommandValue>();
     command->argv = argv();
-    return move(command);
+    return command;
 }
 
 std::shared_ptr<Value> PathRedirection::eval() const
@@ -70,7 +75,7 @@ std::shared_ptr<Value> CastListToCommand::eval() const
         }
     }
 
-    return move(command);
+    return command;
 }
 
 }

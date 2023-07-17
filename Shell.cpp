@@ -5,11 +5,13 @@
  */
 
 #include "Shell.h"
+#include "AST.h"
 #include "FileDescription.h"
 #include "Parser.h"
 #include "Value.h"
 #include <cstdio>
 #include <fcntl.h>
+#include <iostream>
 #include <memory>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -112,11 +114,17 @@ int Shell::run_command(std::string_view input)
     if (!node)
         return 0;
 
+    if (node->is_syntax_error()) {
+        auto err_node = std::static_pointer_cast<AST::SyntaxError>(node);
+        print_error(err_node->error_message(), Error::SyntaxError);
+        return 1;
+    }
+
     auto value = node->eval();
-    FileDescriptionCollector fds;
-    SavedFileDescriptions saved_fds;
 
     if (value->is_command()) {
+        FileDescriptionCollector fds;
+        SavedFileDescriptions saved_fds;
         auto cmd = std::static_pointer_cast<CommandValue>(value);
         if (!resolve_redirections(cmd->redirections, fds, saved_fds))
             return 1;
@@ -124,6 +132,14 @@ int Shell::run_command(std::string_view input)
     }
 
     return 0;
+}
+
+void Shell::print_error(std::string const& message, Error error)
+{
+    switch (error) {
+    case Error::SyntaxError:
+        std::cerr << "ratsh (syntax error): " + message + "\n";
+    }
 }
 
 std::shared_ptr<AST::Node> Shell::parse(std::string_view input) const

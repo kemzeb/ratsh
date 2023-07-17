@@ -13,9 +13,13 @@
 namespace RatShell {
 
 class Shell {
+    enum class Error {
+        SyntaxError
+    };
 
 public:
     int run_command(std::string_view input);
+    void print_error(std::string const& message, Error);
 
 private:
     std::shared_ptr<AST::Node> parse(std::string_view) const;

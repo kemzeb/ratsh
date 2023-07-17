@@ -38,7 +38,6 @@ std::shared_ptr<AST::Node> Parser::parse()
 void Parser::fill_token_buffer()
 {
     while (true) {
-
         auto tokens = m_lexer.batch_next();
         if (tokens.empty())
             break;
@@ -57,13 +56,15 @@ std::shared_ptr<AST::Node> Parser::parse_simple_command()
         /// TODO: Differentiate between cmd_name and cmd_word grammar.
         argv.push_back(consume().value);
     } else {
-        return nullptr;
+        return std::make_shared<AST::SyntaxError>("prefixed redirection not supported yet");
     }
 
     while (true) {
         if (peek().type == Token::Type::Word) {
             argv.push_back(consume().value);
         } else if (auto io_redirect = parse_io_redirect()) {
+            if (io_redirect->is_syntax_error())
+                return io_redirect;
             nodes.push_back(io_redirect);
         } else {
             break;
@@ -107,9 +108,8 @@ std::shared_ptr<AST::Node> Parser::parse_io_file(std::optional<int> io_number)
 
     auto io_operator = consume();
 
-    /// FIXME: This should be an error.
     if (peek().type != Token::Type::Word)
-        return nullptr;
+        return std::make_shared<AST::SyntaxError>("no file name given for redirection");
 
     auto filename = consume();
 
@@ -136,7 +136,7 @@ std::shared_ptr<AST::Node> Parser::parse_io_file(std::optional<int> io_number)
         if (all_of(filename.value.begin(), filename.value.end(), [](unsigned char c) { return std::isdigit(c); }))
             right_fd = std::stoi(filename.value);
         else if (filename.value != "-")
-            return nullptr; /// FIXME: This should be an error.
+            return std::make_shared<AST::SyntaxError>("dup operator not given a valid word");
 
         return std::make_shared<AST::DupRedirection>(left_fd, right_fd, type);
     }

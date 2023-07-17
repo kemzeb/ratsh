@@ -20,6 +20,7 @@ public:
         Execute,
         DuplicateRedirection,
         PathRedirection,
+        SyntaxError,
 
         // The following are considered "convenience" nodes.
         CastListToCommand
@@ -29,6 +30,26 @@ public:
 
     virtual std::shared_ptr<Value> eval() const = 0;
     virtual Kind kind() const = 0;
+
+    virtual bool is_syntax_error() const { return false; }
+};
+
+class SyntaxError final : public Node {
+public:
+    SyntaxError(std::string error_message)
+        : m_error_message(std::move(error_message))
+    {
+    }
+
+    virtual std::shared_ptr<Value> eval() const override;
+    virtual Kind kind() const override { return Node::Kind::SyntaxError; }
+
+    virtual bool is_syntax_error() const override { return true; };
+
+    std::string const& error_message() const { return m_error_message; }
+
+private:
+    std::string m_error_message;
 };
 
 class Execute final : public Node {
