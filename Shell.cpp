@@ -23,9 +23,10 @@ namespace RatShell {
 
 namespace {
 
-bool resolve_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& redirections, FileDescriptionCollector& fds, SavedFileDescriptions& saved_fds)
+bool apply_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& redirections, FileDescriptionCollector& fds, SavedFileDescriptions& saved_fds)
 {
     std::vector<std::pair<int, int>> dups;
+    FileDescriptionCollector fds_to_be_closed;
 
     for (auto const& redir : redirections) {
         auto fd = redir->io_number;
@@ -63,7 +64,7 @@ bool resolve_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& 
             fds.add(path_fd);
             dups.push_back({ path_fd, fd });
         } else if (redir->action == RedirectionValue::Action::Close) {
-            close(fd);
+            fds_to_be_closed.add(fd);
         } else {
             auto const& right_fd = std::get<int>(redir_variant);
             int flags = fcntl(right_fd, F_GETFL);
@@ -88,6 +89,7 @@ bool resolve_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& 
         }
     }
 
+    // Perform redirections.
     for (auto& dup : dups) {
         auto path_fd = dup.first;
         auto fd_to_redirect = dup.second;
@@ -98,6 +100,9 @@ bool resolve_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& 
             return false;
         }
     }
+
+    // Close the desired fds.
+    fds_to_be_closed.collect();
 
     return true;
 }
@@ -126,7 +131,7 @@ int Shell::run_command(std::string_view input)
         FileDescriptionCollector fds;
         SavedFileDescriptions saved_fds;
         auto cmd = std::static_pointer_cast<CommandValue>(value);
-        if (!resolve_redirections(cmd->redirections, fds, saved_fds))
+        if (!apply_redirections(cmd->redirections, fds, saved_fds))
             return 1;
         return execute_process(cmd->argv);
     }
