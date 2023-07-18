@@ -35,7 +35,7 @@ bool apply_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& re
         // Duplicate fd so we may restore it when the parent returns from the fork call.
         auto saved_fd = dup(fd);
         if (saved_fd < 0) {
-            perror("internal: Unable to duplicate fd");
+            perror("dup");
             return false;
         }
 
@@ -45,19 +45,19 @@ bool apply_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& re
         auto flags = fcntl(saved_fd, F_GETFD);
         auto rc = fcntl(saved_fd, F_SETFD, flags | FD_CLOEXEC);
         if (rc < 0) {
-            perror("internal: Unable to change fd flags");
+            perror("fcntl");
             return false;
         }
 
         if (redir->action == RedirectionValue::Action::Open) {
             auto const& data = std::get<RedirectionValue::PathData>(redir_variant);
             auto path = data.path;
-            auto mode = data.flags;
+            auto flags = data.flags;
 
             // Open a file using the given path.
-            auto path_fd = open(path.c_str(), mode, 0666);
+            auto path_fd = open(path.c_str(), flags, 0666);
             if (path_fd < 0) {
-                perror("internal: Unable to open for appending");
+                perror("open");
                 return false;
             }
 
@@ -126,14 +126,30 @@ int Shell::run_command(std::string_view input)
     }
 
     auto value = node->eval();
+    FileDescriptionCollector fds;
+    SavedFileDescriptions saved_fds;
 
     if (value->is_command()) {
-        FileDescriptionCollector fds;
-        SavedFileDescriptions saved_fds;
         auto cmd = std::static_pointer_cast<CommandValue>(value);
         if (!apply_redirections(cmd->redirections, fds, saved_fds))
             return 1;
-        return execute_process(cmd->argv);
+
+        auto pid = fork();
+        if (pid < 0) {
+            /// NOTE: The POSIX spec does not mention what exit code to return when fork() fails.
+            return 1;
+        }
+
+        if (pid == 0) {
+            fds.collect();
+            return execute_process(cmd->argv);
+        }
+
+        // If we're here, we must be the parent process.
+        int status {};
+        wait(&status);
+        if (WIFEXITED(status))
+            return WEXITSTATUS(status);
     }
 
     return 0;
@@ -169,32 +185,16 @@ int Shell::execute_process(std::vector<std::string> const& argv)
     if (!command_is_executable)
         return 126;
 
-    auto pid = fork();
-    if (pid < 0) {
-        /// NOTE: The POSIX spec does not mention what exit code to return when fork() fails.
-        return 1;
+    std::vector<char*> c_strings {};
+
+    c_strings.reserve(argv.size());
+
+    for (auto const& str : argv) {
+        c_strings.push_back(const_cast<char*>(str.c_str()));
     }
+    c_strings.push_back(NULL);
 
-    if (pid == 0) {
-        std::vector<char*> c_strings {};
-
-        c_strings.reserve(argv.size());
-
-        for (auto const& str : argv) {
-            c_strings.push_back(const_cast<char*>(str.c_str()));
-        }
-        c_strings.push_back(NULL);
-
-        return execv(executable_path, c_strings.data());
-    }
-
-    // If we're here, we must be the parent process.
-    int status {};
-    wait(&status);
-    if (WIFEXITED(status))
-        return WEXITSTATUS(status);
-
-    return 0;
+    return execv(executable_path, c_strings.data());
 }
 
 }
