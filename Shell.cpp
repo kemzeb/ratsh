@@ -118,7 +118,7 @@ bool apply_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& re
 
 int Shell::run_command(std::string_view input)
 {
-    if (input.length() == 0)
+    if (input.length() <= 1)
         return 0;
 
     auto node = parse(input);
