@@ -175,16 +175,6 @@ int Shell::execute_process(std::vector<std::string> const& argv)
         return 0;
 
     auto const* executable_path = argv[0].c_str();
-
-    struct stat sb;
-    auto file_exists = stat(executable_path, &sb) == 0 && S_ISREG(sb.st_mode);
-    if (!file_exists)
-        return 127;
-
-    auto command_is_executable = access(executable_path, X_OK) == 0;
-    if (!command_is_executable)
-        return 126;
-
     std::vector<char*> c_strings {};
 
     c_strings.reserve(argv.size());
@@ -194,7 +184,8 @@ int Shell::execute_process(std::vector<std::string> const& argv)
     }
     c_strings.push_back(NULL);
 
-    return execv(executable_path, c_strings.data());
+    execv(executable_path, c_strings.data());
+    exit(errno == ENOENT ? 127 : 126);
 }
 
 }
