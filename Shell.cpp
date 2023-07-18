@@ -49,7 +49,8 @@ bool apply_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& re
             return false;
         }
 
-        if (redir->action == RedirectionValue::Action::Open) {
+        switch (redir->action) {
+        case RedirectionValue::Action::Open: {
             auto const& data = std::get<RedirectionValue::PathData>(redir_variant);
             auto path = data.path;
             auto flags = data.flags;
@@ -63,9 +64,13 @@ bool apply_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& re
 
             fds.add(path_fd);
             dups.push_back({ path_fd, fd });
-        } else if (redir->action == RedirectionValue::Action::Close) {
+            break;
+        }
+        case RedirectionValue::Action::Close:
             fds_to_be_closed.add(fd);
-        } else {
+            break;
+        case RedirectionValue::Action::InputDup:
+        case RedirectionValue::Action::OutputDup: {
             auto const& right_fd = std::get<int>(redir_variant);
             int flags = fcntl(right_fd, F_GETFL);
 
@@ -76,16 +81,18 @@ bool apply_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& re
 
             auto access = flags & O_ACCMODE;
 
-            if (redir->action == RedirectionValue::Action::OutputDup && access == O_RDONLY) {
-                perror("not open for output");
-                return false; // File is not open for input
-            }
             if (redir->action == RedirectionValue::Action::InputDup && access == O_WRONLY) {
                 perror("not open for input");
-                return false; // File is not open for input
+                return false;
+            }
+            if (redir->action == RedirectionValue::Action::OutputDup && access == O_RDONLY) {
+                perror("not open for output");
+                return false;
             }
 
             dups.push_back({ right_fd, fd });
+            break;
+        }
         }
     }
 
@@ -96,7 +103,7 @@ bool apply_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& re
 
         // Redirect fd to path_fd.
         if (dup2(path_fd, fd_to_redirect) < 0) {
-            perror("internal: Unable to redirect");
+            perror("dup2");
             return false;
         }
     }
@@ -145,7 +152,6 @@ int Shell::run_command(std::string_view input)
             return execute_process(cmd->argv);
         }
 
-        // If we're here, we must be the parent process.
         int status {};
         wait(&status);
         if (WIFEXITED(status))

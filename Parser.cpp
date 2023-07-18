@@ -91,7 +91,6 @@ std::shared_ptr<AST::Node> Parser::parse_io_redirect()
 
 std::shared_ptr<AST::Node> Parser::parse_io_file(std::optional<int> io_number)
 {
-    auto is_valid_op = false;
     switch (peek().type) {
     case Token::Type::Less:
     case Token::Type::LessAnd:
@@ -100,11 +99,10 @@ std::shared_ptr<AST::Node> Parser::parse_io_file(std::optional<int> io_number)
     case Token::Type::DoubleGreat:
     case Token::Type::LessGreat:
     case Token::Type::Clobber:
-        is_valid_op = true;
-    }
-
-    if (!is_valid_op)
+        break;
+    default:
         return nullptr;
+    }
 
     auto io_operator = consume();
 
@@ -140,9 +138,9 @@ std::shared_ptr<AST::Node> Parser::parse_io_file(std::optional<int> io_number)
 
         return std::make_shared<AST::DupRedirection>(left_fd, right_fd, type);
     }
+    default:
+        return nullptr;
     }
-
-    return nullptr;
 }
 
 } // namespace RatShell
