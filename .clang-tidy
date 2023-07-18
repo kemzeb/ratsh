@@ -9,7 +9,6 @@ Checks: >
   portability-*,
   readability-*,
   -bugprone-easily-swappable-parameters,
-  -cert-dcl21-cpp, # Deprecated check, will be removed in clang-tidy 19.
   -misc-no-recursion,
   -readability-braces-around-statements,
   -readability-convert-member-functions-to-static,
