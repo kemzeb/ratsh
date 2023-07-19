@@ -17,6 +17,8 @@ public:
 
     void add(int fd);
     void collect();
+    /// NOTE: This should only be used in special situations.
+    void clear();
 
 private:
     std::vector<int> m_fds;
@@ -24,18 +26,17 @@ private:
 
 class SavedFileDescriptions {
 public:
+    SavedFileDescriptions() = default;
+    ~SavedFileDescriptions();
+
+    void add(int fd);
+    void restore();
+
+private:
     struct SavedFileDescription {
         int original { -1 };
         int saved { -1 };
     };
-
-    SavedFileDescriptions() = default;
-    ~SavedFileDescriptions();
-
-    void add(SavedFileDescription);
-    void restore();
-
-private:
     std::vector<SavedFileDescription> m_saves;
     FileDescriptionCollector m_fds;
 };

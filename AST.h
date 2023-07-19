@@ -20,6 +20,7 @@ public:
         Execute,
         DuplicateRedirection,
         PathRedirection,
+        Pipe,
         SyntaxError,
 
         // The following are considered "convenience" nodes.
@@ -128,6 +129,27 @@ private:
     int m_left_fd { -1 };
     std::optional<int> m_right_fd;
     Type m_type { Type::Input };
+};
+
+class Pipe final : public Node {
+public:
+    Pipe(std::shared_ptr<AST::Node> left, std::shared_ptr<AST::Node> right)
+        : m_left(std::move(left))
+        , m_right(std::move(right))
+    {
+    }
+
+    virtual ~Pipe() = default;
+
+    virtual std::shared_ptr<Value> eval() const override;
+    virtual Kind kind() const override { return Kind::Pipe; }
+
+    std::shared_ptr<AST::Node> const& left() { return m_left; }
+    std::shared_ptr<AST::Node> const& right() { return m_right; }
+
+private:
+    std::shared_ptr<AST::Node> m_left;
+    std::shared_ptr<AST::Node> m_right;
 };
 
 class CastListToCommand final : public Node {

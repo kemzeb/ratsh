@@ -58,6 +58,30 @@ std::shared_ptr<Value> DupRedirection::eval() const
     return std::make_shared<RedirectionValue>(left_fd(), RedirectionValue::Action::OutputDup, right_fd);
 }
 
+std::shared_ptr<Value> Pipe::eval() const
+{
+    auto cmd_list = std::make_shared<CommandListValue>();
+
+    cmd_list->is_a_pipe_sequence = true;
+
+    auto left = m_left->eval();
+    if (left->is_command()) {
+        auto cmd = std::static_pointer_cast<CommandValue>(left);
+        cmd_list->cmds.push_back(cmd);
+    }
+
+    auto right = m_right->eval();
+    if (right->is_command()) {
+        auto cmd = std::static_pointer_cast<CommandValue>(right);
+        cmd_list->cmds.push_back(cmd);
+    } else if (right->is_list()) {
+        auto other_list = std::static_pointer_cast<CommandListValue>(right);
+        cmd_list->cmds.insert(cmd_list->cmds.end(), other_list->cmds.begin(), other_list->cmds.end());
+    }
+
+    return cmd_list;
+}
+
 std::shared_ptr<Value> CastListToCommand::eval() const
 {
     auto command = std::make_shared<CommandValue>();

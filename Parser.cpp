@@ -31,8 +31,8 @@ std::shared_ptr<AST::Node> Parser::parse()
             token.type = Token::Type::Word;
     }
 
-    /// FIXME: Implement more grammar rules!
-    return parse_simple_command();
+    /// TODO: Implement more grammar rules!
+    return parse_pipeline();
 }
 
 void Parser::fill_token_buffer()
@@ -43,6 +43,40 @@ void Parser::fill_token_buffer()
             break;
         m_token_buffer.insert(m_token_buffer.end(), tokens.begin(), tokens.end());
     }
+}
+
+std::shared_ptr<AST::Node> Parser::parse_pipeline()
+{
+    /// TODO: Support the bang reserved word.
+    return parse_pipe_sequence();
+}
+
+std::shared_ptr<AST::Node> Parser::parse_pipe_sequence()
+{
+    auto left = parse_command();
+    if (!left || left->is_syntax_error())
+        return left;
+
+    if (peek().type != Token::Type::Pipe) {
+        return left;
+    }
+
+    consume();
+
+    /// TODO: Parse away line breaks.
+
+    if (auto right = parse_pipe_sequence()) {
+        if (right->is_syntax_error())
+            return right;
+        return std::make_shared<AST::Pipe>(left, right);
+    }
+
+    return std::make_shared<AST::SyntaxError>("no command to use read end of pipe");
+}
+
+std::shared_ptr<AST::Node> Parser::parse_command()
+{
+    return parse_simple_command();
 }
 
 std::shared_ptr<AST::Node> Parser::parse_simple_command()
@@ -56,7 +90,7 @@ std::shared_ptr<AST::Node> Parser::parse_simple_command()
         /// TODO: Differentiate between cmd_name and cmd_word grammar.
         argv.push_back(consume().value);
     } else {
-        return std::make_shared<AST::SyntaxError>("prefixed redirection not supported yet");
+        return nullptr;
     }
 
     while (true) {

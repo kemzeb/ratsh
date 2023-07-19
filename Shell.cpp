@@ -32,22 +32,8 @@ bool apply_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& re
         auto fd = redir->io_number;
         auto const& redir_variant = redir->redir_variant;
 
-        // Duplicate fd so we may restore it when the parent returns from the fork call.
-        auto saved_fd = dup(fd);
-        if (saved_fd < 0) {
-            perror("dup");
-            return false;
-        }
-
-        saved_fds.add({ .original = fd, .saved = saved_fd });
-
-        // Make sure to close the duplicated fd for the child process before its execution.
-        auto flags = fcntl(saved_fd, F_GETFD);
-        auto rc = fcntl(saved_fd, F_SETFD, flags | FD_CLOEXEC);
-        if (rc < 0) {
-            perror("fcntl");
-            return false;
-        }
+        // Save fd so that we may restore it.
+        saved_fds.add(fd);
 
         switch (redir->action) {
         case RedirectionValue::Action::Open: {
@@ -116,7 +102,7 @@ bool apply_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& re
 
 }
 
-int Shell::run_command(std::string_view input)
+int Shell::run_single_line(std::string_view input)
 {
     if (input.length() <= 1)
         return 0;
@@ -133,34 +119,140 @@ int Shell::run_command(std::string_view input)
     }
 
     auto value = node->eval();
-    FileDescriptionCollector fds;
-    SavedFileDescriptions saved_fds;
 
     if (value->is_command()) {
         auto cmd = std::static_pointer_cast<CommandValue>(value);
-        if (!apply_redirections(cmd->redirections, fds, saved_fds))
-            return 1;
-
-        auto pid = fork();
-        if (pid < 0) {
-            /// NOTE: The POSIX spec does not mention what exit code to return when fork() fails.
-            return 1;
-        }
-
-        if (pid == 0) {
-            fds.collect();
-            return execute_process(cmd->argv);
-        }
-
-        int status {};
-        wait(&status);
-        if (WIFEXITED(status))
-            return WEXITSTATUS(status);
+        return run_command(cmd);
+    }
+    if (value->is_list()) {
+        auto cmds = std::static_pointer_cast<CommandListValue>(value);
+        return run_commands(cmds);
     }
 
     return 0;
 }
 
+int Shell::run_command(std::shared_ptr<CommandValue> const& cmd)
+{
+    FileDescriptionCollector fds;
+    SavedFileDescriptions saved_fds;
+
+    if (!apply_redirections(cmd->redirections, fds, saved_fds))
+        return 1;
+
+    auto pid = fork();
+    if (pid < 0) {
+        /// NOTE: The POSIX spec does not mention what exit code to return when fork() fails.
+        return 1;
+    }
+
+    if (pid == 0) {
+        fds.collect();
+        return execute_process(cmd->argv);
+    }
+
+    int status {};
+    wait(&status);
+    if (WIFEXITED(status))
+        return WEXITSTATUS(status);
+
+    return 0;
+}
+
+int Shell::run_commands(std::shared_ptr<CommandListValue> const& cmd_list)
+{
+    if (!cmd_list || cmd_list->cmds.empty())
+        return 0;
+
+    int rc = 0;
+
+    if (cmd_list->is_a_pipe_sequence) {
+        FileDescriptionCollector open_fds;
+        SavedFileDescriptions saved_fds;
+        int pipe_fds[2];
+
+        // Initialize the first command.
+        if (pipe(pipe_fds) < 0) {
+            perror("pipe");
+            return 1;
+        }
+
+        /// NOTE: Just in case of any errors, we add any pipe-opened fds so that the
+        //  destructor can close them when returning. In normal execution, they
+        // shouldn't both be closed right away.
+        open_fds.add(pipe_fds[0]);
+        open_fds.add(pipe_fds[1]);
+
+        saved_fds.add(STDOUT_FILENO);
+
+        // Redirect stdout to write end of pipe.
+        if (dup2(pipe_fds[1], STDOUT_FILENO) < 0) {
+            perror("dup2");
+            return 1;
+        }
+
+        open_fds.clear();
+        close(pipe_fds[1]);
+
+        /// FIXME: We end up leaking the read end fd to the child process here as we
+        // still need to use it. Not too bad of a problem, but how can we best resolve
+        // this?
+        auto first_cmd = cmd_list->cmds.front();
+        run_command(first_cmd);
+
+        // Restore stdout after execution completes.
+        saved_fds.restore();
+
+        for (size_t i = 1; i < cmd_list->cmds.size(); i++) {
+            // Save read end of pipe in case we pipe again.
+            auto pipe_read_fd = pipe_fds[0];
+
+            // Add read end of pipe to collector in case of errors.
+            open_fds.add(pipe_fds[0]);
+
+            // If we aren't the last command, we should pipe again.
+            if (i + 1 != cmd_list->cmds.size()) {
+                if (pipe(pipe_fds) < 0) {
+                    perror("pipe");
+                    return 1;
+                }
+
+                open_fds.add(pipe_fds[0]);
+                open_fds.add(pipe_fds[1]);
+
+                saved_fds.add(STDOUT_FILENO);
+
+                // Redirect stdout to write end of pipe.
+                if (dup2(pipe_fds[1], STDOUT_FILENO) < 0) {
+                    perror("dup2");
+                    return 1;
+                }
+
+                close(pipe_fds[1]);
+            }
+
+            saved_fds.add(STDIN_FILENO);
+
+            // Redirect stdin to read end of pipe.
+            if (dup2(pipe_read_fd, STDIN_FILENO) < 0) {
+                perror("dup2");
+                return 1;
+            }
+
+            open_fds.clear();
+            close(pipe_read_fd);
+
+            auto next_cmd = cmd_list->cmds.at(i);
+            rc = run_command(next_cmd);
+
+            saved_fds.restore();
+        }
+    }
+
+    /// TODO: Support and-or lists.
+
+    return rc;
+}
 void Shell::print_error(std::string const& message, Error error)
 {
     switch (error) {

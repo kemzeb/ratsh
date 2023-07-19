@@ -18,7 +18,9 @@ class Shell {
     };
 
 public:
-    int run_command(std::string_view input);
+    int run_single_line(std::string_view input);
+    int run_command(std::shared_ptr<CommandValue> const&);
+    int run_commands(std::shared_ptr<CommandListValue> const&);
     void print_error(std::string const& message, Error);
 
 private:

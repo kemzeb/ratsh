@@ -25,7 +25,7 @@ int main()
             std::cerr << "An unknown error has occurred\n";
 
         input.push_back('\n'); // Add this so that newlines can be lexed.
-        auto code = shell->run_command(input);
+        auto code = shell->run_single_line(input);
 
         if (code != 0)
             std::cerr << "An error has occurred. Code " << code << "\n";

@@ -42,6 +42,9 @@ private:
         return m_token_buffer[m_token_index];
     }
 
+    std::shared_ptr<AST::Node> parse_pipeline();
+    std::shared_ptr<AST::Node> parse_pipe_sequence();
+    std::shared_ptr<AST::Node> parse_command();
     std::shared_ptr<AST::Node> parse_simple_command();
     std::shared_ptr<AST::Node> parse_io_redirect();
     std::shared_ptr<AST::Node> parse_io_file(std::optional<int> io_number);
