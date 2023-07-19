@@ -1,6 +1,12 @@
 # ratsh
 Hobby shell for Unix-based systems
 
+## Features
+Currently, the following features have been implemented:
+
+- Bare-bones POSIX simple commands (many features not yet implemented for this including prefixed redirection, and the shell execution environment needs much work e.g. passing $PATH to the shell environment so that it can be utilized)
+- Support for most of the suffixed redirection operations (e.g. `/bin/ls -la >> ls.txt`)
+- Pipelines (e.g. `/bin/ls | /bin/wc`)
 
 ## Objectives
 - Become more educated in programming language theory
