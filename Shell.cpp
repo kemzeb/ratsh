@@ -282,7 +282,7 @@ int Shell::execute_process(std::vector<std::string> const& argv)
     }
     c_strings.push_back(NULL);
 
-    execv(executable_path, c_strings.data());
+    execvp(executable_path, c_strings.data());
     exit(errno == ENOENT ? 127 : 126);
 }
 
