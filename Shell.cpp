@@ -172,7 +172,7 @@ int Shell::run_commands(std::shared_ptr<CommandListValue> const& cmd_list)
         int pipe_fds[2];
 
         // Initialize the first command.
-        if (pipe(pipe_fds) < 0) {
+        if (pipe2(pipe_fds, O_CLOEXEC) < 0) {
             perror("pipe");
             return 1;
         }
@@ -194,8 +194,6 @@ int Shell::run_commands(std::shared_ptr<CommandListValue> const& cmd_list)
         open_fds.clear();
         close(pipe_fds[1]);
 
-        /// FIXME: We end up leaking the read end fd to the child process here as we
-        // still need to use it. Not too bad of a problem, but how can we best resolve
         // this?
         auto first_cmd = cmd_list->cmds.front();
         run_command(first_cmd);
@@ -212,7 +210,7 @@ int Shell::run_commands(std::shared_ptr<CommandListValue> const& cmd_list)
 
             // If we aren't the last command, we should pipe again.
             if (i + 1 != cmd_list->cmds.size()) {
-                if (pipe(pipe_fds) < 0) {
+                if (pipe2(pipe_fds, O_CLOEXEC) < 0) {
                     perror("pipe");
                     return 1;
                 }
@@ -248,8 +246,6 @@ int Shell::run_commands(std::shared_ptr<CommandListValue> const& cmd_list)
             saved_fds.restore();
         }
     }
-
-    /// TODO: Support and-or lists.
 
     return rc;
 }
