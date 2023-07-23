@@ -15,7 +15,6 @@ namespace RatShell {
 
 struct Value {
     virtual bool is_command() const { return false; }
-    virtual bool is_list() const { return false; }
     virtual bool is_redirection() const { return false; }
 };
 
@@ -60,15 +59,9 @@ struct RedirectionValue final : public Value {
 struct CommandValue final : public Value {
     std::vector<std::string> argv;
     std::vector<std::shared_ptr<RedirectionValue>> redirections;
+    std::shared_ptr<CommandValue> next_in_pipeline;
 
     virtual bool is_command() const override { return true; }
-};
-
-struct CommandListValue final : public Value {
-    std::vector<std::shared_ptr<CommandValue>> cmds;
-    bool is_a_pipe_sequence { false };
-
-    virtual bool is_list() const override { return true; }
 };
 
 }; // namespace RatShell

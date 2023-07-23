@@ -6,6 +6,7 @@
 
 #include "AST.h"
 #include "Value.h"
+#include <cassert>
 #include <fcntl.h>
 #include <memory>
 
@@ -60,26 +61,18 @@ std::shared_ptr<Value> DupRedirection::eval() const
 
 std::shared_ptr<Value> Pipe::eval() const
 {
-    auto cmd_list = std::make_shared<CommandListValue>();
-
-    cmd_list->is_a_pipe_sequence = true;
-
     auto left = m_left->eval();
-    if (left->is_command()) {
-        auto cmd = std::static_pointer_cast<CommandValue>(left);
-        cmd_list->cmds.push_back(cmd);
-    }
+    assert(left->is_command());
+
+    auto cmd = std::static_pointer_cast<CommandValue>(left);
 
     auto right = m_right->eval();
-    if (right->is_command()) {
-        auto cmd = std::static_pointer_cast<CommandValue>(right);
-        cmd_list->cmds.push_back(cmd);
-    } else if (right->is_list()) {
-        auto other_list = std::static_pointer_cast<CommandListValue>(right);
-        cmd_list->cmds.insert(cmd_list->cmds.end(), other_list->cmds.begin(), other_list->cmds.end());
-    }
+    assert(right->is_command());
 
-    return cmd_list;
+    auto right_cmd = std::static_pointer_cast<CommandValue>(right);
+    cmd->next_in_pipeline = right_cmd;
+
+    return cmd;
 }
 
 std::shared_ptr<Value> CastListToCommand::eval() const

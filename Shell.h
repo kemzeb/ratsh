@@ -9,6 +9,7 @@
 #include "AST.h"
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace RatShell {
 
@@ -20,12 +21,14 @@ public:
     };
 
     int run_single_line(std::string_view input);
-    int run_command(std::shared_ptr<CommandValue> const&);
-    int run_commands(std::shared_ptr<CommandListValue> const&);
+
     void print_error(std::string const& message, Error);
 
 private:
     std::shared_ptr<AST::Node> parse(std::string_view) const;
+
+    int run_command(std::shared_ptr<CommandValue> const&);
+    int run_command(std::vector<std::string> const& argv, std::vector<std::shared_ptr<RedirectionValue>> const& redirections);
 
     int execute_process(std::vector<std::string> const& argv);
 };

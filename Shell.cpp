@@ -124,20 +124,107 @@ int Shell::run_single_line(std::string_view input)
         auto cmd = std::static_pointer_cast<CommandValue>(value);
         return run_command(cmd);
     }
-    if (value->is_list()) {
-        auto cmds = std::static_pointer_cast<CommandListValue>(value);
-        return run_commands(cmds);
-    }
 
     return 0;
 }
 
 int Shell::run_command(std::shared_ptr<CommandValue> const& cmd)
 {
+    if (!cmd)
+        return 0;
+    if (!cmd->next_in_pipeline)
+        return run_command(cmd->argv, cmd->redirections);
+
+    int rc = 0;
+
+    FileDescriptionCollector open_fds;
+    SavedFileDescriptions saved_fds;
+    int pipe_fds[2];
+
+    // Initialize the first command.
+    if (pipe2(pipe_fds, O_CLOEXEC) < 0) {
+        perror("pipe");
+        return 1;
+    }
+
+    /// NOTE: Just in case of any errors, we add any pipe-opened fds so that the
+    //  destructor can close them when returning. In normal execution, they
+    // shouldn't both be closed right away.
+    open_fds.add(pipe_fds[0]);
+    open_fds.add(pipe_fds[1]);
+
+    saved_fds.add(STDOUT_FILENO);
+
+    // Redirect stdout to write end of pipe.
+    if (dup2(pipe_fds[1], STDOUT_FILENO) < 0) {
+        perror("dup2");
+        return 1;
+    }
+
+    open_fds.clear();
+    close(pipe_fds[1]);
+
+    run_command(cmd->argv, cmd->redirections);
+
+    // Restore stdout after execution completes.
+    saved_fds.restore();
+
+    auto next_cmd = cmd->next_in_pipeline;
+    while (next_cmd) {
+        // Save read end of pipe in case we pipe again.
+        auto pipe_read_fd = pipe_fds[0];
+
+        // Add read end of pipe to collector in case of errors.
+        open_fds.add(pipe_fds[0]);
+
+        // If we aren't the last command, we should pipe again.
+        if (next_cmd->next_in_pipeline != nullptr) {
+            if (pipe2(pipe_fds, O_CLOEXEC) < 0) {
+                perror("pipe");
+                return 1;
+            }
+
+            open_fds.add(pipe_fds[0]);
+            open_fds.add(pipe_fds[1]);
+
+            saved_fds.add(STDOUT_FILENO);
+
+            // Redirect stdout to write end of pipe.
+            if (dup2(pipe_fds[1], STDOUT_FILENO) < 0) {
+                perror("dup2");
+                return 1;
+            }
+
+            close(pipe_fds[1]);
+        }
+
+        saved_fds.add(STDIN_FILENO);
+
+        // Redirect stdin to read end of pipe.
+        if (dup2(pipe_read_fd, STDIN_FILENO) < 0) {
+            perror("dup2");
+            return 1;
+        }
+
+        open_fds.clear();
+        close(pipe_read_fd);
+
+        // (2.9.2) The exit status shall be the exit status of the last command specified in the pipeline.
+        rc = run_command(next_cmd->argv, next_cmd->redirections);
+
+        saved_fds.restore();
+        next_cmd = next_cmd->next_in_pipeline;
+    }
+
+    return rc;
+}
+
+int Shell::run_command(std::vector<std::string> const& argv, std::vector<std::shared_ptr<RedirectionValue>> const& redirections)
+{
     FileDescriptionCollector fds;
     SavedFileDescriptions saved_fds;
 
-    if (!apply_redirections(cmd->redirections, fds, saved_fds))
+    if (!apply_redirections(redirections, fds, saved_fds))
         return 1;
 
     auto pid = fork();
@@ -148,7 +235,7 @@ int Shell::run_command(std::shared_ptr<CommandValue> const& cmd)
 
     if (pid == 0) {
         fds.collect();
-        return execute_process(cmd->argv);
+        return execute_process(argv);
     }
 
     int status {};
@@ -157,97 +244,6 @@ int Shell::run_command(std::shared_ptr<CommandValue> const& cmd)
         return WEXITSTATUS(status);
 
     return 0;
-}
-
-int Shell::run_commands(std::shared_ptr<CommandListValue> const& cmd_list)
-{
-    if (!cmd_list || cmd_list->cmds.empty())
-        return 0;
-
-    int rc = 0;
-
-    if (cmd_list->is_a_pipe_sequence) {
-        FileDescriptionCollector open_fds;
-        SavedFileDescriptions saved_fds;
-        int pipe_fds[2];
-
-        // Initialize the first command.
-        if (pipe2(pipe_fds, O_CLOEXEC) < 0) {
-            perror("pipe");
-            return 1;
-        }
-
-        /// NOTE: Just in case of any errors, we add any pipe-opened fds so that the
-        //  destructor can close them when returning. In normal execution, they
-        // shouldn't both be closed right away.
-        open_fds.add(pipe_fds[0]);
-        open_fds.add(pipe_fds[1]);
-
-        saved_fds.add(STDOUT_FILENO);
-
-        // Redirect stdout to write end of pipe.
-        if (dup2(pipe_fds[1], STDOUT_FILENO) < 0) {
-            perror("dup2");
-            return 1;
-        }
-
-        open_fds.clear();
-        close(pipe_fds[1]);
-
-        // this?
-        auto first_cmd = cmd_list->cmds.front();
-        run_command(first_cmd);
-
-        // Restore stdout after execution completes.
-        saved_fds.restore();
-
-        for (size_t i = 1; i < cmd_list->cmds.size(); i++) {
-            // Save read end of pipe in case we pipe again.
-            auto pipe_read_fd = pipe_fds[0];
-
-            // Add read end of pipe to collector in case of errors.
-            open_fds.add(pipe_fds[0]);
-
-            // If we aren't the last command, we should pipe again.
-            if (i + 1 != cmd_list->cmds.size()) {
-                if (pipe2(pipe_fds, O_CLOEXEC) < 0) {
-                    perror("pipe");
-                    return 1;
-                }
-
-                open_fds.add(pipe_fds[0]);
-                open_fds.add(pipe_fds[1]);
-
-                saved_fds.add(STDOUT_FILENO);
-
-                // Redirect stdout to write end of pipe.
-                if (dup2(pipe_fds[1], STDOUT_FILENO) < 0) {
-                    perror("dup2");
-                    return 1;
-                }
-
-                close(pipe_fds[1]);
-            }
-
-            saved_fds.add(STDIN_FILENO);
-
-            // Redirect stdin to read end of pipe.
-            if (dup2(pipe_read_fd, STDIN_FILENO) < 0) {
-                perror("dup2");
-                return 1;
-            }
-
-            open_fds.clear();
-            close(pipe_read_fd);
-
-            auto next_cmd = cmd_list->cmds.at(i);
-            rc = run_command(next_cmd);
-
-            saved_fds.restore();
-        }
-    }
-
-    return rc;
 }
 void Shell::print_error(std::string const& message, Error error)
 {
