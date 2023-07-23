@@ -252,8 +252,12 @@ int Shell::run_commands(std::shared_ptr<CommandListValue> const& cmd_list)
 void Shell::print_error(std::string const& message, Error error)
 {
     switch (error) {
+    case Error::General:
+        std::cerr << "ratsh (error): " + message + "\n";
+        break;
     case Error::SyntaxError:
         std::cerr << "ratsh (syntax error): " + message + "\n";
+        break;
     }
 }
 

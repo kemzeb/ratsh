@@ -10,26 +10,28 @@
 #include <string>
 #include <vector>
 
+using namespace RatShell;
+
 int main()
 {
     auto shell = std::make_unique<RatShell::Shell>();
     std::string input;
 
-    std::cout << "> ";
     while (true) {
+        std::cout << "> ";
         getline(std::cin, input);
         if (input == "exit")
             return 0;
 
-        if (!std::cin.good())
-            std::cerr << "An unknown error has occurred\n";
-
+        if (std::cin.fail()) {
+            shell->print_error("unknown error", Shell::Error::General);
+            return 1;
+        }
         input.push_back('\n'); // Add this so that newlines can be lexed.
         auto code = shell->run_single_line(input);
 
         if (code != 0)
-            std::cerr << "An error has occurred. Code " << code << "\n";
-        std::cout << "> ";
+            shell->print_error("code " + std::to_string(code), Shell::Error::General);
     }
 
     return 0;

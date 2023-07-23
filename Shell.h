@@ -13,11 +13,12 @@
 namespace RatShell {
 
 class Shell {
+public:
     enum class Error {
+        General,
         SyntaxError
     };
 
-public:
     int run_single_line(std::string_view input);
     int run_command(std::shared_ptr<CommandValue> const&);
     int run_commands(std::shared_ptr<CommandListValue> const&);
