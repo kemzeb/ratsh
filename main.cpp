@@ -14,11 +14,11 @@ using namespace RatShell;
 
 int main()
 {
-    auto shell = std::make_unique<RatShell::Shell>();
+    auto shell = std::make_unique<Shell>();
     std::string input;
 
     while (true) {
-        std::cout << "> ";
+        std::cout << "ratsh> ";
         getline(std::cin, input);
         if (input == "exit")
             return 0;
