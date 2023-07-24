@@ -7,10 +7,11 @@ Currently, the following features have been implemented:
 - Bare-bones POSIX simple commands (many features not yet implemented for this including prefixed redirection, and the shell execution environment needs much work)
 - Support for most forms of redirection (e.g. `cat < input.txt >> output.txt`)
 - Pipelines (e.g. `ls -la | wc`)
+- And-or lists (e.g. `echo hello && echo world`)
 
 ## Objectives
 - Become more educated in programming language theory
-- Gain a better understanding of the capabilities of Linux processees, the system calls available, etc.
+- Gain a better understanding of the capabilities of Linux processes, the system calls available, etc.
 - Implement a subset of the features provided by POSIX-compliant shells
 
 ## Installation
