@@ -124,6 +124,10 @@ int Shell::run_single_line(std::string_view input)
         auto cmd = std::static_pointer_cast<CommandValue>(value);
         return run_command(cmd);
     }
+    if (value->is_and_or_list()) {
+        auto and_or = std::static_pointer_cast<AndOrListValue>(value);
+        return run_commands(and_or->commands);
+    }
 
     return 0;
 }
@@ -245,6 +249,36 @@ int Shell::run_command(std::vector<std::string> const& argv, std::vector<std::sh
 
     return 0;
 }
+
+int Shell::run_commands(std::vector<std::shared_ptr<CommandValue>> const& commands)
+{
+    if (commands.empty())
+        return 0;
+
+    int rc = 0;
+    bool should_run = true;
+    auto previous_op = CommandValue::WithOp::None;
+
+    for (auto const& command : commands) {
+        if (!should_run) {
+            if (previous_op != command->op)
+                should_run = true;
+            continue;
+        }
+
+        rc = run_command(command);
+        if ((command->op == CommandValue::WithOp::AndIf && rc != 0)
+            || (command->op == CommandValue::WithOp::OrIf && rc == 0))
+            should_run = false;
+
+        previous_op = command->op;
+    }
+
+    /// NOTE: For both and/or lists, the exit status is the last command that is executed in the list.
+    // See https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_09_03_02.
+    return rc;
+}
+
 void Shell::print_error(std::string const& message, Error error)
 {
     switch (error) {

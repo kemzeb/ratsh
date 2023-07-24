@@ -7,6 +7,7 @@
 #pragma once
 
 #include "AST.h"
+#include "Value.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -29,6 +30,7 @@ private:
 
     int run_command(std::shared_ptr<CommandValue> const&);
     int run_command(std::vector<std::string> const& argv, std::vector<std::shared_ptr<RedirectionValue>> const& redirections);
+    int run_commands(std::vector<std::shared_ptr<CommandValue>> const& commands);
 
     int execute_process(std::vector<std::string> const& argv);
 };

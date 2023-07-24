@@ -17,10 +17,11 @@ namespace RatShell::AST {
 class Node {
 public:
     enum class Kind {
+        AndOrIf,
+        DupRedirection,
         Execute,
-        DuplicateRedirection,
         PathRedirection,
-        Pipe,
+        Pipeline,
         SyntaxError,
 
         // The following are considered "convenience" nodes.
@@ -119,7 +120,7 @@ public:
     virtual ~DupRedirection() = default;
 
     virtual std::shared_ptr<Value> eval() const override;
-    virtual Kind kind() const override { return Kind::DuplicateRedirection; }
+    virtual Kind kind() const override { return Kind::DupRedirection; }
 
     int left_fd() const { return m_left_fd; }
     std::optional<int> const& right_fd() const { return m_right_fd; }
@@ -131,18 +132,18 @@ private:
     Type m_type { Type::Input };
 };
 
-class Pipe final : public Node {
+class Pipeline final : public Node {
 public:
-    Pipe(std::shared_ptr<AST::Node> left, std::shared_ptr<AST::Node> right)
+    Pipeline(std::shared_ptr<AST::Node> left, std::shared_ptr<AST::Node> right)
         : m_left(std::move(left))
         , m_right(std::move(right))
     {
     }
 
-    virtual ~Pipe() = default;
+    virtual ~Pipeline() = default;
 
     virtual std::shared_ptr<Value> eval() const override;
-    virtual Kind kind() const override { return Kind::Pipe; }
+    virtual Kind kind() const override { return Kind::Pipeline; }
 
     std::shared_ptr<AST::Node> const& left() { return m_left; }
     std::shared_ptr<AST::Node> const& right() { return m_right; }
@@ -166,6 +167,32 @@ public:
 
 private:
     std::vector<std::shared_ptr<AST::Node>> m_nodes;
+};
+
+class AndOrIf final : public Node {
+public:
+    enum class Type {
+        AndIf,
+        OrIf
+    };
+
+    AndOrIf(std::shared_ptr<AST::Node> left, std::shared_ptr<AST::Node> right, Type type)
+        : m_left(std::move(left))
+        , m_right(std::move(right))
+        , m_type(type)
+    {
+    }
+
+    virtual std::shared_ptr<Value> eval() const override;
+    virtual Kind kind() const override { return Kind::AndOrIf; }
+
+    std::shared_ptr<AST::Node> left() const { return m_left; }
+    std::shared_ptr<AST::Node> right() const { return m_right; }
+
+private:
+    std::shared_ptr<AST::Node> m_left;
+    std::shared_ptr<AST::Node> m_right;
+    Type m_type;
 };
 
 } // namespace RatShell

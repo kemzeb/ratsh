@@ -59,7 +59,7 @@ std::shared_ptr<Value> DupRedirection::eval() const
     return std::make_shared<RedirectionValue>(left_fd(), RedirectionValue::Action::OutputDup, right_fd);
 }
 
-std::shared_ptr<Value> Pipe::eval() const
+std::shared_ptr<Value> Pipeline::eval() const
 {
     auto left = m_left->eval();
     assert(left->is_command());
@@ -95,4 +95,30 @@ std::shared_ptr<Value> CastListToCommand::eval() const
     return command;
 }
 
+std::shared_ptr<Value> AndOrIf::eval() const
+{
+    auto and_or = std::make_shared<AndOrListValue>();
+
+    auto left = m_left->eval();
+    assert(left->is_command());
+
+    auto cmd = std::static_pointer_cast<CommandValue>(left);
+    cmd->op = m_type == Type::AndIf ? CommandValue::WithOp::AndIf : CommandValue::WithOp::OrIf;
+    and_or->commands.push_back(cmd);
+
+    auto right = m_right->eval();
+    assert(right->is_command() || right->is_and_or_list());
+
+    if (right->is_command()) {
+        auto right_cmd = std::static_pointer_cast<CommandValue>(right);
+        and_or->commands.push_back(right_cmd);
+    } else {
+        auto other_and_or = std::static_pointer_cast<AndOrListValue>(right);
+        auto& other_cmds = other_and_or->commands;
+        and_or->commands.insert(and_or->commands.end(), other_cmds.begin(), other_cmds.end());
+    }
+
+    return and_or;
 }
+
+} // namespace RatShell::AST

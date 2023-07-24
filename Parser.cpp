@@ -32,7 +32,7 @@ std::shared_ptr<AST::Node> Parser::parse()
     }
 
     /// TODO: Implement more grammar rules!
-    return parse_pipeline();
+    return parse_and_or();
 }
 
 void Parser::fill_token_buffer()
@@ -45,14 +45,40 @@ void Parser::fill_token_buffer()
     }
 }
 
+std::shared_ptr<AST::Node> Parser::parse_and_or()
+{
+    auto left = parse_pipeline();
+    if (!left || left->is_syntax_error())
+        return left;
+
+    switch (peek().type) {
+    case Token::Type::AndIf:
+    case Token::Type::OrIf:
+        break;
+    default:
+        return left;
+    }
+
+    auto token = consume();
+
+    /// TODO: Parse away line breaks.
+
+    if (auto right = parse_and_or()) {
+        if (right->is_syntax_error())
+            return right;
+
+        if (token.type == Token::Type::AndIf)
+            return std::make_shared<AST::AndOrIf>(left, right, AST::AndOrIf::Type::AndIf);
+        return std::make_shared<AST::AndOrIf>(left, right, AST::AndOrIf::Type::OrIf);
+    }
+
+    return std::make_shared<AST::SyntaxError>("missing a right operand in and-or list");
+}
+
 std::shared_ptr<AST::Node> Parser::parse_pipeline()
 {
     /// TODO: Support the bang reserved word.
-    return parse_pipe_sequence();
-}
 
-std::shared_ptr<AST::Node> Parser::parse_pipe_sequence()
-{
     auto left = parse_command();
     if (!left || left->is_syntax_error())
         return left;
@@ -65,10 +91,10 @@ std::shared_ptr<AST::Node> Parser::parse_pipe_sequence()
 
     /// TODO: Parse away line breaks.
 
-    if (auto right = parse_pipe_sequence()) {
+    if (auto right = parse_pipeline()) {
         if (right->is_syntax_error())
             return right;
-        return std::make_shared<AST::Pipe>(left, right);
+        return std::make_shared<AST::Pipeline>(left, right);
     }
 
     return std::make_shared<AST::SyntaxError>("no command to use read end of pipe");

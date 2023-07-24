@@ -16,6 +16,7 @@ namespace RatShell {
 struct Value {
     virtual bool is_command() const { return false; }
     virtual bool is_redirection() const { return false; }
+    virtual bool is_and_or_list() const { return false; }
 };
 
 struct RedirectionValue final : public Value {
@@ -57,11 +58,24 @@ struct RedirectionValue final : public Value {
 };
 
 struct CommandValue final : public Value {
+    enum class WithOp {
+        None,
+        AndIf,
+        OrIf
+    };
+
     std::vector<std::string> argv;
     std::vector<std::shared_ptr<RedirectionValue>> redirections;
     std::shared_ptr<CommandValue> next_in_pipeline;
+    WithOp op { WithOp::None };
 
     virtual bool is_command() const override { return true; }
+};
+
+struct AndOrListValue final : public Value {
+    std::vector<std::shared_ptr<CommandValue>> commands;
+
+    virtual bool is_and_or_list() const override { return true; }
 };
 
 }; // namespace RatShell
