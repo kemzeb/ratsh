@@ -18,7 +18,7 @@ int main()
     std::string input;
 
     while (true) {
-        std::cout << "ratsh> ";
+        std::cerr << "ratsh> ";
         getline(std::cin, input);
         if (input == "exit")
             return 0;
