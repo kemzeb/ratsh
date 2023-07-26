@@ -25,7 +25,7 @@ public:
         SyntaxError,
 
         // The following are considered "convenience" nodes.
-        CastListToCommand
+        ConcatenateListToCommand
     };
 
     virtual ~Node() = default;
@@ -153,15 +153,15 @@ private:
     std::shared_ptr<AST::Node> m_right;
 };
 
-class CastListToCommand final : public Node {
+class ConcatenateListToCommand final : public Node {
 public:
-    CastListToCommand(std::vector<std::shared_ptr<AST::Node>> nodes)
+    ConcatenateListToCommand(std::vector<std::shared_ptr<AST::Node>> nodes)
         : m_nodes(std::move(nodes))
     {
     }
 
     virtual std::shared_ptr<Value> eval() const override;
-    virtual Kind kind() const override { return Kind::CastListToCommand; }
+    virtual Kind kind() const override { return Kind::ConcatenateListToCommand; }
 
     std::vector<std::shared_ptr<AST::Node>> const& nodes() const { return m_nodes; };
 

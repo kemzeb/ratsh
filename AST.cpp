@@ -75,7 +75,7 @@ std::shared_ptr<Value> Pipeline::eval() const
     return cmd;
 }
 
-std::shared_ptr<Value> CastListToCommand::eval() const
+std::shared_ptr<Value> ConcatenateListToCommand::eval() const
 {
     auto command = std::make_shared<CommandValue>();
 

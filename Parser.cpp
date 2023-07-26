@@ -132,7 +132,7 @@ std::shared_ptr<AST::Node> Parser::parse_simple_command()
     }
     nodes.push_back(std::make_shared<AST::Execute>(argv));
 
-    return std::make_shared<AST::CastListToCommand>(nodes);
+    return std::make_shared<AST::ConcatenateListToCommand>(nodes);
 }
 
 std::shared_ptr<AST::Node> Parser::parse_io_redirect()
