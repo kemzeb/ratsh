@@ -34,7 +34,7 @@ bool isdigit(char ch)
     return std::isdigit(static_cast<unsigned char>(ch)) != 0;
 }
 
-}
+} // namespace
 
 namespace RatShell {
 
@@ -404,4 +404,4 @@ Lexer::TransitionResult Lexer::transition_comment()
     };
 }
 
-}
+} // namespace RatShell

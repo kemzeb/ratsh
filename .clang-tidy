@@ -8,6 +8,7 @@ Checks: >
   performance-*,
   portability-*,
   readability-*,
+  llvm-namespace-comment,
   -bugprone-easily-swappable-parameters,
   -misc-no-recursion,
   -readability-braces-around-statements,

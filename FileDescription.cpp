@@ -65,4 +65,4 @@ void SavedFileDescriptions::restore()
     m_fds.collect();
 }
 
-}
+} // namespace RatShell

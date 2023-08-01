@@ -195,4 +195,4 @@ private:
     Type m_type;
 };
 
-} // namespace RatShell
+} // namespace RatShell::AST

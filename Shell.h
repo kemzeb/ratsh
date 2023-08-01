@@ -35,4 +35,4 @@ private:
     int execute_process(std::vector<std::string> const& argv);
 };
 
-}
+} // namespace RatShell

@@ -100,7 +100,7 @@ bool apply_redirections(std::vector<std::shared_ptr<RedirectionValue>> const& re
     return true;
 }
 
-}
+} // namespace
 
 int Shell::run_single_line(std::string_view input)
 {
@@ -316,4 +316,4 @@ int Shell::execute_process(std::vector<std::string> const& argv)
     exit(errno == ENOENT ? 127 : 126);
 }
 
-}
+} // namespace RatShell

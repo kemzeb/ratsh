@@ -203,4 +203,4 @@ private:
     StateType m_next_state_type { StateType::Start };
 };
 
-}
+} // namespace RatShell

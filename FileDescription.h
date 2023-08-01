@@ -41,4 +41,4 @@ private:
     FileDescriptionCollector m_fds;
 };
 
-}
+} // namespace RatShell
