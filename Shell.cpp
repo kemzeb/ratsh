@@ -6,6 +6,7 @@
 
 #include "Shell.h"
 #include "AST.h"
+#include "Builtins.h"
 #include "FileDescription.h"
 #include "Parser.h"
 #include "Value.h"
@@ -13,6 +14,7 @@
 #include <fcntl.h>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -230,6 +232,8 @@ int Shell::run_command(std::vector<std::string> const& argv, std::vector<std::sh
 
     if (!apply_redirections(redirections, fds, saved_fds))
         return 1;
+    if (auto rc_maybe = run_builtin(argv); rc_maybe.has_value())
+        return rc_maybe.value();
 
     auto pid = fork();
     if (pid < 0) {
@@ -277,6 +281,19 @@ int Shell::run_commands(std::vector<std::shared_ptr<CommandValue>> const& comman
     /// NOTE: For both and/or lists, the exit status is the last command that is executed in the list.
     // See https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_09_03_02.
     return rc;
+}
+
+std::optional<int> Shell::run_builtin(std::vector<std::string> const& argv)
+{
+    if (argv.empty())
+        return 0;
+
+    auto const& cmd = argv[0];
+
+    if (cmd == "cd")
+        return builtin_cd(argv);
+
+    return std::nullopt;
 }
 
 void Shell::print_error(std::string const& message, Error error)

@@ -24,6 +24,8 @@ include(GoogleTest)
 set(sources
     AST.h
     AST.cpp
+    Builtins.h
+    Builtins.cpp
     FileDescription.h
     FileDescription.cpp
     Lexer.cpp
