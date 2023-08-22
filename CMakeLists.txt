@@ -11,7 +11,6 @@ add_compile_options(-Wextra)
 add_compile_options(-Wno-unknown-warning-option)
 add_compile_options(-Wno-unused-command-line-argument)
 add_compile_options(-fdiagnostics-color=always)
-add_compile_options(-fno-exceptions)
 
 # To generate compile_commands.json for clangd.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
