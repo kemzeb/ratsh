@@ -83,4 +83,27 @@ int builtin_cd(std::vector<std::string> const& argv)
     return 0;
 }
 
+// https://pubs.opengroup.org/onlinepubs/9699919799/utilities/pwd.html
+int builtin_pwd(std::vector<std::string> const&)
+{
+    // TODO: Implement -L and -P options.
+
+    auto const* pwd = std::getenv("PWD");
+    if (pwd == nullptr) {
+        std::cerr << "failed to get $PWD: " << strerror(errno) << "\n";
+        return 1;
+    }
+
+    std::error_code ec;
+    auto path = std::filesystem::canonical(pwd, ec);
+    if (ec) {
+        std::cerr << pwd << ": " << ec.message() << "\n";
+        return 1;
+    }
+
+    std::cout << path << "\n";
+
+    return 0;
+}
+
 } // namespace RatShell

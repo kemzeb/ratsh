@@ -13,5 +13,6 @@
 namespace RatShell {
 
 int builtin_cd(std::vector<std::string> const& argv);
+int builtin_pwd(std::vector<std::string> const& argv);
 
 } // namespace RatShell
