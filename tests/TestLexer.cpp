@@ -1,4 +1,4 @@
-#include "../Lexer.h"
+#include <Lexer.h>
 #include <gtest/gtest.h>
 
 namespace RatShell {

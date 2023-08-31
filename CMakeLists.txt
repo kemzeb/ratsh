@@ -15,38 +15,7 @@ add_compile_options(-fdiagnostics-color=always)
 # To generate compile_commands.json for clangd.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/CMake)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-enable_testing()
-include(FetchGoogleTest)
-include(GoogleTest)
-
-set(sources
-    AST.h
-    AST.cpp
-    Builtins.h
-    Builtins.cpp
-    FileDescription.h
-    FileDescription.cpp
-    Lexer.cpp
-    Lexer.h
-    Parser.h
-    Parser.cpp
-    Shell.cpp
-    Shell.h
-    Value.h
-)
-add_library(ratsh STATIC ${sources})
-add_executable(main main.cpp)
-target_link_libraries(main ratsh)
-
-add_executable(
-    tests
-    Tests/TestLexer.cpp
-)
-target_link_libraries(
-    tests
-    GTest::gtest_main
-    ratsh
-)
-gtest_discover_tests(tests)
+add_subdirectory(src)
+add_subdirectory(tests)
