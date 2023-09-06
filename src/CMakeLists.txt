@@ -1,4 +1,6 @@
 add_library(Ratsh
+    ArgsParser.h
+    ArgsParser.cpp
     AST.h
     AST.cpp
     Builtins.h

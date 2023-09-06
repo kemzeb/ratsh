@@ -4,6 +4,7 @@ include(GoogleTest)
 
 add_executable(
     Tests
+    TestArgsParser.cpp
     TestLexer.cpp
 )
 target_link_libraries(
