@@ -28,7 +28,7 @@ TEST_F(ArgsParserTest, AddBoolOptionNormal)
     parser.add_option(enable_mark, "enable the Mark of the Outsider", "", 'o');
     parser.parse(argv);
 
-    ASSERT_EQ(true, enable_mark);
+    ASSERT_TRUE(enable_mark);
 }
 
 TEST_F(ArgsParserTest, AddNonExistentBoolOption)
@@ -40,7 +40,7 @@ TEST_F(ArgsParserTest, AddNonExistentBoolOption)
     parser.add_option(three_flag, "enable Half Life 3 development", "", 't');
     parser.parse(argv);
 
-    ASSERT_EQ(false, three_flag);
+    ASSERT_FALSE(three_flag);
 }
 
 TEST_F(ArgsParserTest, AddStringOptionArgument)
@@ -53,4 +53,31 @@ TEST_F(ArgsParserTest, AddStringOptionArgument)
     parser.parse(argv);
 
     ASSERT_EQ("json", file_format);
+}
+
+TEST_F(ArgsParserTest, AddStringOperand)
+{
+    RatShell::ArgsParser parser;
+    std::vector<std::string> argv = { "mk3", "reptile", "warrior" };
+    std::string character;
+    std::string tower;
+
+    parser.add_operand(character, "choose your character", "character");
+    parser.add_operand(tower, "choose your destiny", "tower");
+
+    ASSERT_TRUE(parser.parse(argv));
+    ASSERT_EQ("reptile", character);
+    ASSERT_EQ("warrior", tower);
+}
+
+TEST_F(ArgsParserTest, AddStringOperandMissing)
+{
+    RatShell::ArgsParser parser;
+    std::vector<std::string> argv = { "prog" };
+    std::string file_path;
+
+    parser.add_operand(file_path, "file path to project directory", "path");
+
+    ASSERT_FALSE(parser.parse(argv));
+    ASSERT_EQ("", file_path);
 }

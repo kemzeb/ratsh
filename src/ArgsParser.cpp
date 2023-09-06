@@ -89,6 +89,30 @@ void ArgsParser::add_option(Option&& option)
     m_options.push_back(std::move(option));
 }
 
+void ArgsParser::add_operand(std::string& value, std::string help, std::string name)
+{
+    auto operand = Operand {
+        .help = std::move(help),
+        .name = std::move(name),
+        .accept_operand = [&value](std::string_view op) {
+            value = op;
+        }
+    };
+
+    add_operand(std::move(operand));
+}
+
+void ArgsParser::add_operand(Operand&& operand)
+{
+    for (auto const& existing_operand : m_operands) {
+        if (operand.name == existing_operand.name) {
+            std::cerr << "detected duplicate operand name: " << operand.name << "\n";
+            exit_with_err();
+        }
+    }
+    m_operands.push_back(std::move(operand));
+}
+
 bool ArgsParser::parse(std::vector<std::string> const& argv)
 {
     int argc = (int)argv.size();
@@ -102,8 +126,6 @@ bool ArgsParser::parse(std::vector<std::string> const& argv)
 
 bool ArgsParser::parse(int argc, char* const argv[])
 {
-    /// TODO: Support operands (aka positional arguments).
-
     if (argc < 1)
         return true;
 
@@ -118,12 +140,18 @@ bool ArgsParser::parse(int argc, char* const argv[])
         }
     }
 
+    // Parse options.
+    int option_idx = 1;
+
     while (true) {
         auto result = OptionsParser::parse(argc, argv, opstring);
         auto opt = result.opt;
 
-        if (opt == -1)
+        if (opt == -1) {
+            option_idx = result.index;
             break;
+        }
+
         if (opt == '?')
             return false;
 
@@ -140,6 +168,18 @@ bool ArgsParser::parse(int argc, char* const argv[])
         auto arg = result.arg.value_or("");
 
         option.accept_arg(arg);
+    }
+
+    // Parse operands.
+    size_t num_operands = argc - option_idx;
+    if (num_operands != m_operands.size()) {
+        std::cerr << argv[0] << ": missing operands\n";
+        return false;
+    }
+
+    for (auto& operand : m_operands) {
+        auto* const op = argv[option_idx++];
+        operand.accept_operand(op);
     }
 
     return true;
