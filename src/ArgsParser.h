@@ -23,7 +23,13 @@ public:
         std::function<void(std::string_view)> accept_arg;
     };
 
+    enum class Required {
+        No,
+        Yes
+    };
+
     struct Operand {
+        Required reqiured { Required::Yes };
         std::string help;
         std::string name;
         std::function<void(std::string_view)> accept_operand;
@@ -33,7 +39,7 @@ public:
     void add_option_argument(std::string& value, std::string help, std::string long_name, char short_name);
     void add_option(Option&&);
 
-    void add_operand(std::string& value, std::string help, std::string name);
+    void add_operand(std::string& value, std::string help, std::string name, Required required = Required::Yes);
     void add_operand(Operand&&);
 
     bool parse(std::vector<std::string> const& argv);

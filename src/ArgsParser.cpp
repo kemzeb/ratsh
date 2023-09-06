@@ -89,9 +89,10 @@ void ArgsParser::add_option(Option&& option)
     m_options.push_back(std::move(option));
 }
 
-void ArgsParser::add_operand(std::string& value, std::string help, std::string name)
+void ArgsParser::add_operand(std::string& value, std::string help, std::string name, Required required)
 {
     auto operand = Operand {
+        .reqiured = required,
         .help = std::move(help),
         .name = std::move(name),
         .accept_operand = [&value](std::string_view op) {
@@ -104,6 +105,9 @@ void ArgsParser::add_operand(std::string& value, std::string help, std::string n
 
 void ArgsParser::add_operand(Operand&& operand)
 {
+    /// FIXME: Not sure if it makes since to have 2 or more optional operands or
+    /// a required operand after a optional operand. Account for this.
+
     for (auto const& existing_operand : m_operands) {
         if (operand.name == existing_operand.name) {
             std::cerr << "detected duplicate operand name: " << operand.name << "\n";
@@ -171,15 +175,25 @@ bool ArgsParser::parse(int argc, char* const argv[])
     }
 
     // Parse operands.
-    size_t num_operands = argc - option_idx;
-    if (num_operands != m_operands.size()) {
-        std::cerr << argv[0] << ": missing operands\n";
-        return false;
+    size_t num_required_operands = 0;
+    for (auto const& operand : m_operands) {
+        if (operand.reqiured == Required::Yes)
+            num_required_operands++;
     }
 
     for (auto& operand : m_operands) {
+        if (option_idx == argc)
+            break;
         auto* const op = argv[option_idx++];
         operand.accept_operand(op);
+
+        if (operand.reqiured == Required::Yes)
+            num_required_operands--;
+    }
+
+    if (num_required_operands != 0) {
+        std::cerr << argv[0] << "missing operands\n";
+        exit_with_err();
     }
 
     return true;

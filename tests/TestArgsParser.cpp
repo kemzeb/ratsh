@@ -81,3 +81,45 @@ TEST_F(ArgsParserTest, AddStringOperandMissing)
     ASSERT_FALSE(parser.parse(argv));
     ASSERT_EQ("", file_path);
 }
+
+TEST_F(ArgsParserTest, AddStringOperandWithOption)
+{
+    RatShell::ArgsParser parser;
+    std::vector<std::string> argv = { "mk3", "-m", "bank", "reptile", "warrior" };
+    std::string character;
+    std::string tower;
+    std::string map;
+
+    parser.add_option_argument(map, "choose your map", "", 'm');
+    parser.add_operand(character, "choose your character", "character");
+    parser.add_operand(tower, "choose your destiny", "tower");
+
+    ASSERT_TRUE(parser.parse(argv));
+    ASSERT_EQ("bank", map);
+    ASSERT_EQ("reptile", character);
+    ASSERT_EQ("warrior", tower);
+}
+
+TEST_F(ArgsParserTest, AddStringOperandOptional)
+{
+    RatShell::ArgsParser parser;
+    std::vector<std::string> argv = { "prog", "/test/path" };
+    std::string file_path;
+
+    parser.add_operand(file_path, "file path to project directory", "path", RatShell::ArgsParser::Required::No);
+
+    ASSERT_TRUE(parser.parse(argv));
+    ASSERT_EQ("/test/path", file_path);
+}
+
+TEST_F(ArgsParserTest, AddStringOperandOptionalMissing)
+{
+    RatShell::ArgsParser parser;
+    std::vector<std::string> argv = { "prog" };
+    std::string file_path;
+
+    parser.add_operand(file_path, "file path to project directory", "path", RatShell::ArgsParser::Required::No);
+
+    ASSERT_TRUE(parser.parse(argv));
+    ASSERT_EQ("", file_path);
+}
