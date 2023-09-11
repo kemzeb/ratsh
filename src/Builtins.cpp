@@ -101,7 +101,7 @@ int builtin_pwd(std::vector<std::string> const&)
         return 1;
     }
 
-    std::cout << path << "\n";
+    std::cout << path.string() << "\n";
 
     return 0;
 }

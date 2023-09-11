@@ -292,6 +292,8 @@ std::optional<int> Shell::run_builtin(std::vector<std::string> const& argv)
 
     if (cmd == "cd")
         return builtin_cd(argv);
+    if (cmd == "pwd")
+        return builtin_pwd(argv);
 
     return std::nullopt;
 }
